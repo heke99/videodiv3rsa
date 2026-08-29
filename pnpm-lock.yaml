@@ -140,6 +140,12 @@ importers:
         specifier: workspace:*
         version: link:../storage
 
+  packages/auth:
+    dependencies:
+      '@videoai/database':
+        specifier: workspace:*
+        version: link:../database
+
   packages/config:
     dependencies:
       zod:
@@ -263,6 +269,9 @@ importers:
       '@videoai/assets':
         specifier: workspace:*
         version: link:../../packages/assets
+      '@videoai/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@videoai/config':
         specifier: workspace:*
         version: link:../../packages/config

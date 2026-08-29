@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@videoai/assets": "workspace:*",
+    "@videoai/auth": "workspace:*",
     "@videoai/config": "workspace:*",
     "@videoai/contracts": "workspace:*",
     "@videoai/database": "workspace:*",

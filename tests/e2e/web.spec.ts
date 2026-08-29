@@ -4,6 +4,11 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { chromium, type Browser, type Page } from "playwright";
 
+/** Minimal shape of the browser API used inside addInitScript. */
+interface Storage {
+  setItem(key: string, value: string): void;
+}
+
 /**
  * End to end against the real built app in a real browser (spec section 111).
  *
@@ -125,7 +130,10 @@ async function visibleText(page: Page): Promise<string> {
 async function signedInPage(browser: Browser, path: string): Promise<Page> {
   const context = await browser.newContext();
   await context.addInitScript(() => {
-    window.localStorage.setItem(
+    // Runs in the browser, where localStorage exists; this file is typechecked
+    // for Node, so the global is reached through globalThis rather than by
+    // pulling the DOM lib into the whole test project.
+    (globalThis as unknown as { localStorage: Storage }).localStorage.setItem(
       "videoai.session",
       JSON.stringify({ token: "e2e-token", organization_id: "org-1" }),
     );
