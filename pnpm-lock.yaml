@@ -14,6 +14,9 @@ importers:
       '@videoai/api':
         specifier: workspace:*
         version: link:services/api
+      '@videoai/assets':
+        specifier: workspace:*
+        version: link:packages/assets
       '@videoai/config':
         specifier: workspace:*
         version: link:packages/config
@@ -29,6 +32,9 @@ importers:
       '@videoai/gpu-manager':
         specifier: workspace:*
         version: link:services/gpu-manager
+      '@videoai/media':
+        specifier: workspace:*
+        version: link:services/media
       '@videoai/models':
         specifier: workspace:*
         version: link:packages/models
@@ -62,6 +68,18 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)(terser@5.51.2)
+
+  packages/assets:
+    dependencies:
+      '@videoai/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@videoai/database':
+        specifier: workspace:*
+        version: link:../database
+      '@videoai/storage':
+        specifier: workspace:*
+        version: link:../storage
 
   packages/config:
     dependencies:
@@ -198,6 +216,18 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+
+  services/media:
+    dependencies:
+      '@videoai/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@videoai/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      fastify:
+        specifier: ^5.2.0
+        version: 5.12.1
 
   services/orchestrator:
     dependencies:

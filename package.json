@@ -21,11 +21,13 @@
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@videoai/api": "workspace:*",
+    "@videoai/assets": "workspace:*",
     "@videoai/config": "workspace:*",
     "@videoai/contracts": "workspace:*",
     "@videoai/database": "workspace:*",
     "@videoai/director": "workspace:*",
     "@videoai/gpu-manager": "workspace:*",
+    "@videoai/media": "workspace:*",
     "@videoai/models": "workspace:*",
     "@videoai/orchestrator": "workspace:*",
     "@videoai/render": "workspace:*",
