@@ -5,6 +5,8 @@
  * in. The base URL is configuration; nothing in the app knows a hostname.
  */
 
+import type { Session } from "@videoai/ui";
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -24,9 +26,7 @@ function baseUrl(): string {
   return url.replace(/\/$/, "");
 }
 
-export interface RequestOptions {
-  token: string;
-  organizationId?: string;
+export interface RequestOptions extends Session {
   signal?: AbortSignal;
 }
 

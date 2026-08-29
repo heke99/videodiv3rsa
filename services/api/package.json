@@ -11,7 +11,8 @@
   "scripts": {
     "build": "tsup src/server.ts --format esm",
     "typecheck": "tsc --noEmit",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@videoai/assets": "workspace:*",
@@ -19,9 +20,7 @@
     "@videoai/config": "workspace:*",
     "@videoai/contracts": "workspace:*",
     "@videoai/database": "workspace:*",
-    "@videoai/gpu-manager": "workspace:*",
     "@videoai/orchestrator": "workspace:*",
-    "@videoai/render": "workspace:*",
     "@videoai/storage": "workspace:*",
     "@videoai/timeline": "workspace:*",
     "@videoai/usage": "workspace:*",

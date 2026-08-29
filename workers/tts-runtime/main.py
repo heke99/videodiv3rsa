@@ -6,9 +6,8 @@ import logging
 import os
 
 import uvicorn
-from videoai_worker import create_app
-
 from tts_runtime.adapter import ADAPTER
+from videoai_worker import create_app
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())
 

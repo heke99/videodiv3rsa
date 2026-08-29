@@ -1,0 +1,23 @@
+# Python worker tooling. The workers are the one part of the system that is not
+# TypeScript, and they get the same treatment: a linter that runs in CI, and a
+# line length that matches the TypeScript side so a reviewer reading both is
+# not switching widths.
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = [".venv", "vendor", "**/__pycache__"]
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle
+  "F",    # pyflakes
+  "I",    # import sorting
+  "B",    # bugbear: the mutable-default and loop-variable-capture classes
+  "UP",   # pyupgrade
+  "RUF",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert on values the linter would rather see compared with `is`.
+"tests/**" = ["E712"]

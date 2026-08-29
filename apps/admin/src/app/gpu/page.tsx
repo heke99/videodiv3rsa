@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { adminApi, type WorkerRow } from "@/lib/api";
-import { useSession } from "@/lib/session";
+import { useSession } from "@videoai/ui";
 
 /** The GPU fleet, and the one control that matters: draining a worker. */
 export default function GpuPage() {

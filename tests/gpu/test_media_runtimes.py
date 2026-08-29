@@ -10,13 +10,12 @@ lip sync repair chasing the wrong audio.
 from __future__ import annotations
 
 import pytest
-from videoai_worker import GenerateRequest, Resolution
-from videoai_worker.backend import StubBackend
-
 from audio_runtime.adapter import MMAudioAdapter
 from image_runtime.adapter import QwenImageAdapter
 from lipsync_runtime.adapter import MuseTalkAdapter
 from tts_runtime.adapter import QwenTTSAdapter
+from videoai_worker import GenerateRequest, Resolution
+from videoai_worker.backend import StubBackend
 from vision_runtime.adapter import VisionAdapter
 
 

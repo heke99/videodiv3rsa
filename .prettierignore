@@ -1,0 +1,14 @@
+node_modules
+dist
+.next
+.turbo
+.venv
+vendor
+pnpm-lock.yaml
+
+# Skill packages are hashed into the registry, and a reformat that nobody
+# versioned reads as drift. They are edited as content, not as code.
+skills
+
+# Migrations are applied in order and never rewritten.
+infra/database/migrations

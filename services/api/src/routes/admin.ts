@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { query, queryOne } from "@videoai/database";
 import { breakdown, costPerApprovedShot } from "@videoai/usage";
-import { authenticate, type Caller } from "../auth.js";
+import { authenticate, conflict, notFound, type Caller } from "../auth.js";
 
 /**
  * Admin surface (spec section 83).
@@ -21,9 +21,7 @@ async function requireAdmin(request: Parameters<typeof authenticate>[0]): Promis
   if (!admin) {
     // Same answer as an unknown route: staff endpoints do not advertise
     // themselves to users who cannot use them.
-    const error = new Error("Not found");
-    (error as Error & { statusCode?: number }).statusCode = 404;
-    throw error;
+    throw notFound();
   }
   return caller;
 }
@@ -143,9 +141,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       [id, body.status, body.commercial_use, body.territories, body.license_name ?? null, caller.user_id],
     );
     if (!updated) {
-      const error = new Error("Not found");
-      (error as Error & { statusCode?: number }).statusCode = 404;
-      throw error;
+      throw notFound();
     }
 
     await queryOne(
@@ -180,12 +176,10 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         [id],
       );
       if (licence?.status !== "approved" || !licence.commercial_use) {
-        const error = new Error(
+        throw conflict(
           `${id} cannot be promoted: its licence is "${licence?.status ?? "unknown"}" ` +
             `and commercial use is ${licence?.commercial_use ? "granted" : "not granted"}.`,
         );
-        (error as Error & { statusCode?: number }).statusCode = 409;
-        throw error;
       }
     }
 

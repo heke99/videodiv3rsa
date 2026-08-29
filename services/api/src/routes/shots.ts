@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { query, queryOne, transaction } from "@videoai/database";
-import { assertOwned, authenticate, type Caller } from "../auth.js";
+import { assertOwned, authenticate, notFound, type Caller } from "../auth.js";
 
 /**
  * Shot-level editing: the operations the project editor performs on one shot
@@ -16,9 +16,7 @@ async function assertShotOwned(shotId: string, caller: Caller): Promise<{ projec
     [shotId],
   );
   if (!shot || shot.organization_id !== caller.organization_id) {
-    const error = new Error("Not found");
-    (error as Error & { statusCode?: number }).statusCode = 404;
-    throw error;
+    throw notFound();
   }
   return { project_id: shot.project_id };
 }
@@ -67,9 +65,7 @@ export async function shotRoutes(app: FastifyInstance): Promise<void> {
       [id, version],
     );
     if (!target) {
-      const error = new Error(`This shot has no version ${version}`);
-      (error as Error & { statusCode?: number }).statusCode = 404;
-      throw error;
+      throw notFound(`This shot has no version ${version}`);
     }
 
     await queryOne(

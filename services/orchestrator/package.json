@@ -11,7 +11,8 @@
   "scripts": {
     "build": "tsup src/index.ts src/worker.ts --format esm --dts",
     "typecheck": "tsc --noEmit",
-    "dev": "tsx watch src/worker.ts"
+    "dev": "tsx watch src/worker.ts",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@temporalio/activity": "^1.11.6",

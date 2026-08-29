@@ -1,9 +1,12 @@
 import type { FastifyRequest } from "fastify";
 import {
   AuthError,
+  HttpError,
   assertOwnedBy,
   authenticateToken,
+  conflict,
   isPlatformAdmin,
+  notFound,
   type Caller,
   type OwnedTable,
 } from "@videoai/auth";
@@ -13,7 +16,7 @@ import {
  * only pulls the two values out of the request that they need.
  */
 
-export { AuthError, isPlatformAdmin };
+export { AuthError, HttpError, conflict, isPlatformAdmin, notFound };
 export type { Caller };
 
 export async function authenticate(request: FastifyRequest): Promise<Caller> {

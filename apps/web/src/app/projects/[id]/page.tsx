@@ -3,9 +3,9 @@
 import { use, useCallback, useEffect, useState } from "react";
 import type { JobStatus } from "@videoai/contracts";
 import { api, type JobState, type ShotSummary, type TimelineView } from "@/lib/api";
-import { useSession } from "@/components/session";
+import { useSession } from "@videoai/ui";
 import { ProgressPanel } from "@/components/progress";
-import { TimelineView_ } from "@/components/timeline";
+import { TimelineTracks } from "@/components/timeline";
 import { ShotInspector } from "@/components/shot-inspector";
 import { ExportPanel } from "@/components/export";
 import { MODE_LABELS, STATUS_LABELS } from "@/lib/format";
@@ -52,16 +52,31 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const running = job !== null && !isTerminal(job.status as JobStatus);
   useEffect(() => {
     if (!session || !job || !running) return;
-    const timer = setInterval(async () => {
-      try {
-        const next = await api.getJob(job.id, session);
-        setJob(next);
-        if (isTerminal(next.status as JobStatus)) void load();
-      } catch {
-        // A transient failure while polling should not clear the page.
-      }
+    // Guarded against overlap: a poll that outlives the interval must not have
+    // a second one started on top of it, or a slow API turns into a queue of
+    // requests that answer out of order and flicker the status backwards.
+    let inFlight = false;
+    let stopped = false;
+    const timer = setInterval(() => {
+      if (inFlight) return;
+      inFlight = true;
+      void (async () => {
+        try {
+          const next = await api.getJob(job.id, session);
+          if (stopped) return;
+          setJob(next);
+          if (isTerminal(next.status as JobStatus)) await load();
+        } catch {
+          // A transient failure while polling should not clear the page.
+        } finally {
+          inFlight = false;
+        }
+      })();
     }, 3000);
-    return () => clearInterval(timer);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
   }, [session, job, running, load]);
 
   if (!session) return <div className="page muted">Sign in to open this project.</div>;
@@ -120,7 +135,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           />
 
           {timeline && (
-            <TimelineView_
+            <TimelineTracks
               data={timeline}
               selectedShotId={selectedShotId}
               onSelectShot={setSelectedShotId}

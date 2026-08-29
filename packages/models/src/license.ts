@@ -15,8 +15,11 @@ export const ROUTABLE_LIFECYCLES: readonly ModelLifecycle[] = ["production", "ca
 
 export interface LicenseGateInput {
   model_id: string;
-  license_status: LicenseStatus | string;
-  lifecycle: ModelLifecycle | string;
+  // The database column is plain text, so an unrecognised value has to be
+  // representable here -- and must fail the gate rather than crash it. The
+  // branded string keeps the known values suggestible all the same.
+  license_status: LicenseStatus | (string & {});
+  lifecycle: ModelLifecycle | (string & {});
   commercial_use: boolean;
   territories: string[];
   /** Territory the work will be delivered into, if the caller knows it. */

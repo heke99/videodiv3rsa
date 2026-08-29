@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { query, queryOne } from "@videoai/database";
-import { authenticate } from "../auth.js";
+import { authenticate, notFound } from "../auth.js";
 
 /**
  * The asset library (spec section 99): characters, products, locations and
@@ -25,7 +25,7 @@ export async function libraryRoutes(app: FastifyInstance): Promise<void> {
     );
     const { project_id } = z.object({ project_id: z.string().uuid().optional() }).parse(request.query);
 
-    const table = ENTITY_TABLES[kind as EntityKind];
+    const table = ENTITY_TABLES[kind];
 
     if (kind === "voices") {
       return {
@@ -66,9 +66,7 @@ export async function libraryRoutes(app: FastifyInstance): Promise<void> {
       [id, caller.organization_id],
     );
     if (!entity) {
-      const error = new Error("Not found");
-      (error as Error & { statusCode?: number }).statusCode = 404;
-      throw error;
+      throw notFound();
     }
 
     const versions = await query(
@@ -99,9 +97,7 @@ export async function libraryRoutes(app: FastifyInstance): Promise<void> {
       [id, caller.organization_id],
     );
     if (!updated) {
-      const error = new Error("Not found");
-      (error as Error & { statusCode?: number }).statusCode = 404;
-      throw error;
+      throw notFound();
     }
     return { promoted: true };
   });

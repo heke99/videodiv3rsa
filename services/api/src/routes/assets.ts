@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createAsset, currentVersion, listVersions, restoreVersion } from "@videoai/assets";
 import { query, queryOne } from "@videoai/database";
 import { storage } from "@videoai/storage";
-import { authenticate, type Caller } from "../auth.js";
+import { authenticate, notFound, type Caller } from "../auth.js";
 import { UploadRejected, checkSize, detectAndVerify, sanitizeLabel } from "../uploads.js";
 
 /**
@@ -22,9 +22,7 @@ async function assertAssetOwned(assetId: string, caller: Caller): Promise<void> 
     [assetId],
   );
   if (!asset || asset.organization_id !== caller.organization_id) {
-    const error = new Error("Not found");
-    (error as Error & { statusCode?: number }).statusCode = 404;
-    throw error;
+    throw notFound();
   }
 }
 
@@ -67,7 +65,7 @@ export async function assetRoutes(app: FastifyInstance): Promise<void> {
     const created = await createAsset({
       organization_id: caller.organization_id,
       project_id: headers["x-project-id"] ?? null,
-      kind: kind === "voice_reference" ? "voice_reference" : (kind as "image" | "video" | "audio"),
+      kind: kind === "voice_reference" ? "voice_reference" : kind,
       role: headers["x-role"],
       label: sanitizeLabel(headers["x-filename"]),
       mime: detected.mime,
@@ -86,9 +84,7 @@ export async function assetRoutes(app: FastifyInstance): Promise<void> {
 
     const version = await currentVersion(id);
     if (!version) {
-      const error = new Error("Not found");
-      (error as Error & { statusCode?: number }).statusCode = 404;
-      throw error;
+      throw notFound();
     }
 
     return {

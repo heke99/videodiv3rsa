@@ -19,7 +19,7 @@ import {
 function measurement(caseId: string, scores: Record<string, number>): BenchmarkMeasurement {
   return {
     case_id: caseId,
-    scores: scores as BenchmarkMeasurement["scores"],
+    scores,
     runtime_ms: 1000,
     peak_vram_bytes: 40 * 1024 ** 3,
     repair_attempts: 0,

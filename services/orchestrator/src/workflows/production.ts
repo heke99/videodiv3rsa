@@ -285,7 +285,6 @@ export async function production(input: ProductionInput): Promise<ProductionResu
 
       // Repair before regeneration: a shot that is right except for the mouth
       // should cost one lip sync pass, not a whole new shot.
-      let assetId = generated.asset_id;
       for (let repair = 1; repair <= budget.max_repair_attempts; repair++) {
         if (!checkBudget(budget, working).ok) break;
 
@@ -315,7 +314,7 @@ export async function production(input: ProductionInput): Promise<ProductionResu
           repair_attempts: 1,
         });
 
-        assetId = repaired.asset_id;
+        const assetId = repaired.asset_id;
         evaluation = await activities.runJudges({
           job_id: input.job_id,
           asset_id: assetId,

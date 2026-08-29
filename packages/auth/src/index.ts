@@ -19,12 +19,38 @@ export interface Caller {
   access_token: string;
 }
 
-export class AuthError extends Error {
+/**
+ * An error whose HTTP status is part of what it means.
+ *
+ * Routes used to say what they meant by assigning `statusCode` onto a plain
+ * Error and casting to get at the field. Seventeen copies of that cast is a
+ * type hole repeated seventeen times: nothing checked the number was a status,
+ * and nothing connected it to the handler that reads it. This is the type the
+ * handler actually matches on.
+ */
+export class HttpError extends Error {
   constructor(
     message: string,
     readonly status: number,
   ) {
     super(message);
+    this.name = "HttpError";
+  }
+}
+
+/** The resource does not exist, or the caller may not know that it does. */
+export function notFound(message = "Not found"): HttpError {
+  return new HttpError(message, 404);
+}
+
+/** The request is valid but the current state will not accept it. */
+export function conflict(message: string): HttpError {
+  return new HttpError(message, 409);
+}
+
+export class AuthError extends HttpError {
+  constructor(message: string, status: number) {
+    super(message, status);
     this.name = "AuthError";
   }
 }

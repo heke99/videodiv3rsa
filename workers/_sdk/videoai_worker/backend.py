@@ -19,6 +19,7 @@ import asyncio
 import hashlib
 import os
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 from .contract import GenerateRequest
 
@@ -70,8 +71,10 @@ class InferenceBackend(abc.ABC):
         return frames * (pixels / (720 * 1280)) * 1.6
 
     #: Resident size in GiB per model, filled in by each runtime and refined
-    #: by benchmarks once hardware exists.
-    vram_gib: dict[str, int] = {}
+    #: by benchmarks once hardware exists. A class attribute on purpose: it
+    #: describes the runtime, not the instance, and every subclass replaces it
+    #: wholesale rather than mutating this one.
+    vram_gib: ClassVar[dict[str, int]] = {}
 
     def estimate_vram(self, model_id: str, precision: str) -> int:
         base = self.vram_gib.get(model_id, 16)
@@ -90,7 +93,7 @@ class CudaBackend(InferenceBackend):
 
     def available(self) -> bool:
         try:
-            import torch  # noqa: PLC0415
+            import torch
 
             return bool(torch.cuda.is_available())
         except ImportError:
@@ -98,7 +101,7 @@ class CudaBackend(InferenceBackend):
 
     def device_info(self) -> DeviceInfo:
         try:
-            import torch  # noqa: PLC0415
+            import torch
         except ImportError:
             return DeviceInfo(detail="torch is not installed in this runtime")
 
@@ -139,12 +142,12 @@ class CudaBackend(InferenceBackend):
         )
 
     async def unload(self, handle: object) -> None:
-        import gc  # noqa: PLC0415
+        import gc
 
         del handle
         gc.collect()
         try:
-            import torch  # noqa: PLC0415
+            import torch
 
             torch.cuda.empty_cache()
         except ImportError:

@@ -1,5 +1,5 @@
-import type { AudioEvent, CaptionEvent, Timeline, VideoEvent } from "@videoai/contracts";
-import { LOUDNESS_TARGETS } from "@videoai/contracts";
+import type { AspectRatio, AudioEvent, CaptionEvent, Timeline, VideoEvent } from "@videoai/contracts";
+import { EXPORT_PRESETS, LOUDNESS_TARGETS } from "@videoai/contracts";
 import { framesToDisplaySeconds, type Rational } from "@videoai/timeline";
 import { ffmpeg } from "./ffmpeg.js";
 
@@ -162,17 +162,9 @@ function escapeFilterPath(path: string): string {
   return `'${path.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/:/g, "\\:")}'`;
 }
 
-/** Export presets (spec section 41). */
-export const EXPORT_PRESETS: Record<string, { width: number; height: number }> = {
-  "9:16": { width: 1080, height: 1920 },
-  "16:9": { width: 1920, height: 1080 },
-  "1:1": { width: 1080, height: 1080 },
-  "4:5": { width: 1080, height: 1350 },
-  "21:9": { width: 2560, height: 1080 },
-};
-
-export function presetFor(aspect: string, fps: Rational): { width: number; height: number; fps: Rational } {
-  const preset = EXPORT_PRESETS[aspect];
-  if (!preset) throw new Error(`No export preset for aspect ratio ${aspect}`);
-  return { ...preset, fps };
+export function presetFor(
+  aspect: AspectRatio,
+  fps: Rational,
+): { width: number; height: number; fps: Rational } {
+  return { ...EXPORT_PRESETS[aspect], fps };
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/api";
-import { useSession } from "@/lib/session";
+import { useSession } from "@videoai/ui";
 
 /** Operations overview (spec section 83). */
 export default function Overview() {

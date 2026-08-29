@@ -20,7 +20,7 @@ const TRACK_COLORS: Record<string, string> = {
   CAPTIONS: "var(--track-captions)",
 };
 
-export function TimelineView_({
+export function TimelineTracks({
   data,
   selectedShotId,
   onSelectShot,

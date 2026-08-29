@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import "@videoai/ui/globals.css";
 
 const appName = process.env["NEXT_PUBLIC_APP_NAME"] ?? "Video AI";
 

@@ -12,15 +12,13 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import os
 from pathlib import Path
 
 import pytest
-
 from videoai_worker import GenerateRequest, Resolution, verify_artifacts
+from videoai_worker.backend import CudaBackend, StubBackend
 from videoai_worker.models import ArtifactVerificationError
 from wan_runtime.adapter import WanAdapter
-from videoai_worker.backend import CudaBackend, StubBackend
 
 
 def request(**overrides) -> GenerateRequest:

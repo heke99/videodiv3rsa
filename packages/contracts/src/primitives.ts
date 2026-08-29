@@ -65,6 +65,22 @@ export type SampleSpan = z.infer<typeof SampleSpan>;
 export const AspectRatio = z.enum(["9:16", "16:9", "1:1", "4:5", "21:9"]);
 export type AspectRatio = z.infer<typeof AspectRatio>;
 
+/**
+ * Delivery geometry per aspect ratio (spec section 41).
+ *
+ * Here rather than in the compositor because the API validates against it, the
+ * export panel labels itself from it and the orchestrator renders to it. Typed
+ * as a total record so adding an aspect ratio to the enum above will not
+ * compile until its resolution exists.
+ */
+export const EXPORT_PRESETS: Record<AspectRatio, { width: number; height: number }> = {
+  "9:16": { width: 1080, height: 1920 },
+  "16:9": { width: 1920, height: 1080 },
+  "1:1": { width: 1080, height: 1080 },
+  "4:5": { width: 1080, height: 1350 },
+  "21:9": { width: 2560, height: 1080 },
+};
+
 export const Resolution = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),

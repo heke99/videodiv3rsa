@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { AspectRatio } from "@videoai/contracts";
 import { api, ApiError } from "@/lib/api";
-import { useSession } from "@/components/session";
+import { useSession } from "@videoai/ui";
 import { CREATE_MODES, MODE_LABELS } from "@/lib/format";
 
 /**
@@ -13,11 +14,20 @@ import { CREATE_MODES, MODE_LABELS } from "@/lib/format";
  * by the router from what the shot needs.
  */
 
-const ASPECTS = [
-  { value: "9:16", label: "Vertical", hint: "TikTok, Reels, Shorts" },
-  { value: "16:9", label: "Widescreen", hint: "YouTube, web" },
-  { value: "1:1", label: "Square", hint: "Feed posts" },
-];
+/**
+ * Copy for the shapes offered here. The set itself comes from the contract, so
+ * an aspect ratio added there appears rather than being silently unavailable;
+ * one without copy shows its ratio and where it is typically used stays blank.
+ */
+const ASPECT_COPY: Partial<Record<AspectRatio, { label: string; hint: string }>> = {
+  "9:16": { label: "Vertical", hint: "TikTok, Reels, Shorts" },
+  "16:9": { label: "Widescreen", hint: "YouTube, web" },
+  "1:1": { label: "Square", hint: "Feed posts" },
+};
+
+const ASPECTS = AspectRatio.options
+  .filter((value) => value in ASPECT_COPY)
+  .map((value) => ({ value, ...ASPECT_COPY[value]! }));
 
 const DURATIONS = [15, 30, 45, 60];
 

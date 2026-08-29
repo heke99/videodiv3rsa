@@ -3,7 +3,7 @@ import { z } from "zod";
 import { diffTimelines, framesToDisplaySeconds } from "@videoai/timeline";
 import type { Timeline } from "@videoai/contracts";
 import { query, queryOne, transaction } from "@videoai/database";
-import { assertOwned, authenticate } from "../auth.js";
+import { assertOwned, authenticate, conflict, notFound } from "../auth.js";
 
 /**
  * The timeline the editor draws (spec section 42).
@@ -97,9 +97,7 @@ export async function timelineRoutes(app: FastifyInstance): Promise<void> {
       [id, muted, caller.organization_id],
     );
     if (!updated) {
-      const error = new Error("Not found");
-      (error as Error & { statusCode?: number }).statusCode = 404;
-      throw error;
+      throw notFound();
     }
     return { muted };
   });
@@ -128,9 +126,7 @@ export async function timelineRoutes(app: FastifyInstance): Promise<void> {
     const before = versions.find((v) => v.version === from);
     const after = versions.find((v) => v.version === to);
     if (!before || !after) {
-      const error = new Error("One of those timeline versions does not exist.");
-      (error as Error & { statusCode?: number }).statusCode = 404;
-      throw error;
+      throw notFound("One of those timeline versions does not exist.");
     }
 
     return diffTimelines(before.document, after.document);
@@ -153,20 +149,16 @@ export async function timelineRoutes(app: FastifyInstance): Promise<void> {
       );
       const row = timeline.rows[0];
       if (!row) {
-        const error = new Error("This project has no timeline yet.");
-        (error as Error & { statusCode?: number }).statusCode = 409;
-        throw error;
+        throw conflict("This project has no timeline yet.");
       }
 
       if (row.current_version !== body.expected_version) {
         // Another tab saved first. Refusing is the only safe answer: merging
         // two timeline edits automatically would silently lose one of them.
-        const error = new Error(
+        throw conflict(
           `This timeline changed elsewhere (now at version ${row.current_version}). ` +
             `Reload before saving.`,
         );
-        (error as Error & { statusCode?: number }).statusCode = 409;
-        throw error;
       }
 
       const next = row.current_version + 1;

@@ -9,7 +9,6 @@ import type {
   TimelineEvent,
   TimelineTrack,
   TrackKind,
-  VideoEvent,
 } from "@videoai/contracts";
 import { captionsFromAlignment, layoutVideoTrack } from "./timeline.js";
 import { framesToSamples, samplesToFrames, type Rational } from "./rational.js";
@@ -299,7 +298,7 @@ export function applyDucking(
     }
 
     if (cursor < bed.end_sample) {
-      pieces.push(slice(bed, cursor, bed.end_sample, bed.gain_db, part++));
+      pieces.push(slice(bed, cursor, bed.end_sample, bed.gain_db, part));
     }
     return pieces.filter((p) => p.end_sample > p.start_sample);
   });

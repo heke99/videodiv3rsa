@@ -7,7 +7,6 @@ import os
 
 import uvicorn
 from videoai_worker import create_app
-
 from wan_runtime.adapter import WanAdapter
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())

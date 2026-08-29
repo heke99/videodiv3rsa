@@ -7,7 +7,6 @@ import os
 
 import uvicorn
 from videoai_worker import create_app
-
 from vision_runtime.adapter import ADAPTER
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())

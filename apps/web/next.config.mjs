@@ -3,7 +3,7 @@ const config = {
   reactStrictMode: true,
   // Workspace packages ship TypeScript source rather than build output, so
   // Next compiles them alongside the app.
-  transpilePackages: ["@videoai/contracts"],
+  transpilePackages: ["@videoai/contracts", "@videoai/ui"],
   // Nothing here may hardcode a host: the API base is configuration, and the
   // deployment target is interchangeable (spec section 58).
   env: {

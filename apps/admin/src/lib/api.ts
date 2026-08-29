@@ -5,10 +5,9 @@
  * gets 404 rather than 403, so the admin surface does not announce itself.
  */
 
-export interface RequestOptions {
-  token: string;
-  organizationId?: string;
-}
+import type { Session } from "@videoai/ui";
+
+export type RequestOptions = Session;
 
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {

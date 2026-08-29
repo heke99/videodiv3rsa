@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/api";
-import { useSession } from "@/lib/session";
+import { text, useSession } from "@videoai/ui";
 
 /** Recent generation jobs, newest first. */
 export default function JobsPage() {
@@ -39,7 +39,7 @@ export default function JobsPage() {
               <span className="muted" style={{ fontSize: "0.8rem" }}>
                 {Math.round(spend["gpu_seconds"] ?? 0)}s GPU ·{" "}
                 {spend["generation_attempts"] ?? 0} generations · {spend["repair_attempts"] ?? 0} repairs
-                {job["error_message"] ? ` · ${String(job["error_message"]).slice(0, 120)}` : ""}
+                {text(job["error_message"]) ? ` · ${text(job["error_message"]).slice(0, 120)}` : ""}
               </span>
             </div>
           );

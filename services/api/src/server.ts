@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import { z } from "zod";
 import { config } from "@videoai/config";
-import { AuthError, authenticate } from "./auth.js";
+import { HttpError } from "./auth.js";
 import { UploadRejected } from "./uploads.js";
 import { adminRoutes } from "./routes/admin.js";
 import { assetRoutes } from "./routes/assets.js";
@@ -20,14 +20,14 @@ const cfg = config();
 const app = Fastify({ logger: { level: cfg.LOG_LEVEL } });
 
 app.setErrorHandler((error, _request, reply) => {
-  if (error instanceof AuthError) {
+  if (error instanceof HttpError) {
     return reply.status(error.status).send({ error: error.message });
   }
   if (error instanceof UploadRejected) {
     return reply.status(415).send({ error: error.message });
   }
-  // Routes raise conflicts and not-founds by attaching a status code, so the
-  // handler stays in one place rather than being repeated per route.
+  // Fastify's own rejections -- an oversized body, a malformed URL -- still
+  // arrive with a status code and no type to match on.
   const known = error as { statusCode?: number; message?: string };
   if (known.statusCode && known.statusCode >= 400 && known.statusCode < 500) {
     return reply.status(known.statusCode).send({ error: known.message ?? "Request rejected" });

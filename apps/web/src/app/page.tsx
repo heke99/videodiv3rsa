@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, ApiError, type ProjectSummary } from "@/lib/api";
-import { useSession } from "@/components/session";
+import { useSession } from "@videoai/ui";
 import { MODE_LABELS, STATUS_LABELS, framesToClock, relativeTime } from "@/lib/format";
 
 /**

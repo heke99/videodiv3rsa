@@ -205,7 +205,7 @@ async function detectAnomalies(
   durationSeconds: number,
   hasAudio: boolean,
 ): Promise<Anomalies> {
-  let stderr = "";
+  let stderr: string;
   try {
     // -vsync 0 keeps the reported frame count equal to what survives the
     // filter, which is what makes the duplicate ratio measurable at all.

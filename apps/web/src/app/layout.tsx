@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import "@videoai/ui/globals.css";
 
 /**
  * The shell. The product name comes from configuration so a rebrand or a

@@ -157,7 +157,7 @@ export class Planner {
       ].join("\n\n"),
     });
 
-    return finalisePlan(plan, brief, ctx);
+    return finalisePlan(plan, brief);
   }
 
   async repairPlan(
@@ -193,11 +193,7 @@ export class Planner {
  * The Director is good at deciding where the cuts go and unreliable at
  * arithmetic, so the durations are reconciled here rather than by asking again.
  */
-export function finalisePlan(
-  plan: ShotPlan,
-  brief: CreativeBrief,
-  ctx: PlanningContext,
-): ShotPlan {
+export function finalisePlan(plan: ShotPlan, brief: CreativeBrief): ShotPlan {
   const errors = validatePlanGraph(plan);
   if (errors.length > 0) {
     throw new Error(`Shot plan is not internally consistent:\n${errors.map((e) => `  - ${e}`).join("\n")}`);

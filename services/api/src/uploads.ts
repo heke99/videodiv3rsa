@@ -95,7 +95,9 @@ export function checkSize(kind: string, bytes: number): void {
  */
 export function sanitizeLabel(filename: string): string {
   const stripped = filename
-    // Control characters, which terminals and log viewers interpret.
+    // Control characters, which terminals and log viewers interpret. Matching
+    // them literally is the whole point, so the rule against it does not apply.
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f]/g, "")
     // Path separators, so a label can never be read as a directory.
     .replace(/[\\/]/g, "-")

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AspectRatio, EXPORT_PRESETS } from "@videoai/contracts";
 import { api, type RequestOptions } from "@/lib/api";
 
 /**
@@ -10,11 +11,19 @@ import { api, type RequestOptions } from "@/lib/api";
  * than a re-render per platform.
  */
 
-const ASPECTS = [
-  { value: "9:16", label: "Vertical 1080×1920" },
-  { value: "16:9", label: "Widescreen 1920×1080" },
-  { value: "1:1", label: "Square 1080×1080" },
-];
+/** Names for the shapes; the dimensions come from the contract's own presets. */
+const ASPECT_NAMES: Partial<Record<AspectRatio, string>> = {
+  "9:16": "Vertical",
+  "16:9": "Widescreen",
+  "1:1": "Square",
+};
+
+const ASPECTS = AspectRatio.options
+  .filter((value) => value in ASPECT_NAMES)
+  .map((value) => ({
+    value,
+    label: `${ASPECT_NAMES[value]!} ${EXPORT_PRESETS[value].width}\u00d7${EXPORT_PRESETS[value].height}`,
+  }));
 
 interface RenderRow {
   id: string;

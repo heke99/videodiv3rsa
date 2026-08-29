@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/api";
-import { useSession } from "@/lib/session";
+import { useSession } from "@videoai/ui";
 
 /** Quality across the fleet: what fails, how often, and how much is repaired. */
 export default function QualityPage() {

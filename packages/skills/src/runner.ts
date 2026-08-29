@@ -108,9 +108,11 @@ function withTimeout<T>(promise: Promise<T>, seconds: number, skillId: string): 
         clearTimeout(timer);
         resolve(value);
       },
-      (error) => {
+      (error: unknown) => {
         clearTimeout(timer);
-        reject(error);
+        // Normalised so a skill that rejects with a bare string still reaches
+        // the caller as something with a stack.
+        reject(error instanceof Error ? error : new Error(String(error)));
       },
     );
   });

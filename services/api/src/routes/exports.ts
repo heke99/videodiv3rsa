@@ -1,9 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { EXPORT_PRESETS } from "@videoai/render";
+import { AspectRatio, EXPORT_PRESETS } from "@videoai/contracts";
 import { query, queryOne } from "@videoai/database";
 import { storage } from "@videoai/storage";
-import { assertOwned, authenticate } from "../auth.js";
+import { assertOwned, authenticate, conflict, notFound } from "../auth.js";
 
 /**
  * Renders and exports (spec section 41).
@@ -46,7 +46,7 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
 
     const body = z
       .object({
-        aspect_ratio: z.enum(["9:16", "16:9", "1:1", "4:5", "21:9"]),
+        aspect_ratio: AspectRatio,
         burned_captions: z.boolean().default(false),
         container: z.enum(["mp4", "webm"]).default("mp4"),
       })
@@ -59,12 +59,10 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
       [id],
     );
     if (!render) {
-      const error = new Error("This project has no completed render to export yet.");
-      (error as Error & { statusCode?: number }).statusCode = 409;
-      throw error;
+      throw conflict("This project has no completed render to export yet.");
     }
 
-    const preset = EXPORT_PRESETS[body.aspect_ratio]!;
+    const preset = EXPORT_PRESETS[body.aspect_ratio];
     const created = await queryOne<{ id: string }>(
       `insert into public.exports
          (organization_id, render_id, aspect_ratio, width, height, container,
@@ -89,14 +87,10 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
       [id],
     );
     if (!row || row.organization_id !== caller.organization_id) {
-      const error = new Error("Not found");
-      (error as Error & { statusCode?: number }).statusCode = 404;
-      throw error;
+      throw notFound();
     }
     if (row.status !== "completed" || !row.asset_id) {
-      const error = new Error(`This export is ${row.status}.`);
-      (error as Error & { statusCode?: number }).statusCode = 409;
-      throw error;
+      throw conflict(`This export is ${row.status}.`);
     }
 
     const version = await queryOne<{ storage_key: string }>(

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { useSession } from "@/components/session";
+import { text, useSession } from "@videoai/ui";
 
 /**
  * The asset library (spec section 99).
@@ -68,12 +68,12 @@ export default function LibraryPage() {
           {entries.map((entry) => (
             <div key={String(entry["id"])} className="card">
               <strong style={{ display: "block", marginBottom: "0.3rem" }}>
-                {String(entry["label"] ?? entry["slug"] ?? "Untitled")}
+                {text(entry["label"]) || text(entry["slug"], "Untitled")}
               </strong>
               <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
-                <span className="badge">{String(entry["slug"] ?? "")}</span>
+                <span className="badge">{text(entry["slug"])}</span>
                 {entry["is_library_entity"] === true && <span className="badge">shared</span>}
-                {entry["language"] !== undefined && <span className="badge">{String(entry["language"])}</span>}
+                {text(entry["language"]) !== "" && <span className="badge">{text(entry["language"])}</span>}
               </div>
             </div>
           ))}

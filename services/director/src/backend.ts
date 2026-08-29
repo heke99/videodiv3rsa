@@ -74,7 +74,7 @@ export class LocalReasoningBackend implements DirectorBackend {
       return content;
     } catch (error) {
       if ((error as Error).name === "AbortError") {
-        throw new Error("Local reasoning model timed out while planning");
+        throw new Error("Local reasoning model timed out while planning", { cause: error });
       }
       throw error;
     } finally {

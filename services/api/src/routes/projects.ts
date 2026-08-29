@@ -3,7 +3,7 @@ import { z } from "zod";
 import { CreateVideoRequest } from "@videoai/contracts";
 import { query, queryOne, transaction } from "@videoai/database";
 import { budgetFor, cancelProduction, getProgress, startProduction } from "@videoai/orchestrator";
-import { assertOwned, authenticate } from "../auth.js";
+import { assertOwned, authenticate, conflict } from "../auth.js";
 
 /**
  * Projects and their generation jobs.
@@ -122,9 +122,9 @@ export async function projectRoutes(app: FastifyInstance): Promise<void> {
         "select updated_at from public.projects where id = $1",
         [id],
       );
-      const error = new Error("This project changed in another tab; reload before saving.");
-      (error as Error & { statusCode?: number }).statusCode = 409;
-      throw Object.assign(error, { current_updated_at: current?.updated_at });
+      throw Object.assign(conflict("This project changed in another tab; reload before saving."), {
+        current_updated_at: current?.updated_at,
+      });
     }
 
     return { updated_at: updated.updated_at };

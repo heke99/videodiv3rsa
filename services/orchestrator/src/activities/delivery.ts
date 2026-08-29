@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { ApplicationFailure } from "@temporalio/activity";
 import { createAsset } from "@videoai/assets";
 import type {
+  AspectRatio,
   DialogueAlignment,
   LoudnessProfile,
   QualityEvaluation,
@@ -12,12 +13,11 @@ import type {
   TechnicalQcReport,
   Timeline,
 } from "@videoai/contracts";
-import { Timebase } from "@videoai/contracts";
+import { EXPORT_PRESETS, Timebase } from "@videoai/contracts";
 import { query, queryOne, transaction } from "@videoai/database";
 import { coverage, evaluate, measuredJudges, modelJudges, type Judge } from "@videoai/quality";
 import {
   compose,
-  EXPORT_PRESETS,
   probe,
   runTechnicalQc as measureFile,
   toSrt,
@@ -628,7 +628,12 @@ async function loadTimeline(timelineId: string): Promise<{ timeline: Timeline; v
 }
 
 function presetOrThrow(aspect: string): { width: number; height: number } {
-  const preset = EXPORT_PRESETS[aspect];
+  const preset = EXPORT_PRESETS[aspect as AspectRatio] as
+    | { width: number; height: number }
+    | undefined;
+  // The column is plain text, so an aspect ratio the contract does not know
+  // reaches here as a string. Refusing is right: guessing a resolution would
+  // deliver a file in a shape nobody asked for.
   if (!preset) throw ApplicationFailure.nonRetryable(`No export preset for aspect ratio ${aspect}`);
   return preset;
 }

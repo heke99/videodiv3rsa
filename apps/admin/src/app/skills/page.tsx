@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/api";
-import { useSession } from "@/lib/session";
+import { text, useSession } from "@videoai/ui";
 
 /** The skill catalogue, with what is active and how it is performing. */
 export default function SkillsPage() {
@@ -54,7 +54,7 @@ export default function SkillsPage() {
                 </span>
                 <span className="row" style={{ gap: "0.75rem" }}>
                   <span className="muted" style={{ fontSize: "0.85rem" }}>
-                    v{String(skill["current_version"] ?? "-")}
+                    v{text(skill["current_version"], "-")}
                   </span>
                   {runs > 0 && (
                     <span

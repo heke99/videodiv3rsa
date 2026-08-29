@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { adminApi, type ModelRow } from "@/lib/api";
-import { useSession } from "@/lib/session";
+import { useSession } from "@videoai/ui";
 
 /**
  * Models and licence review (spec sections 65, 83, 85).
