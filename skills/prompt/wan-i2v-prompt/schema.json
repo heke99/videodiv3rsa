@@ -1,0 +1,30 @@
+{
+  "input": {
+    "type": "object",
+    "required": [
+      "shot"
+    ],
+    "properties": {
+      "shot": {
+        "type": "object"
+      },
+      "keyframe": {
+        "type": "object"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string"
+      },
+      "negative_prompt": {
+        "type": "string"
+      },
+      "reference_strength": {
+        "type": "number"
+      }
+    }
+  }
+}

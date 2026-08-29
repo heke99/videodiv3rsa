@@ -1,0 +1,25 @@
+{
+  "input": {
+    "type": "object",
+    "required": [
+      "description",
+      "action"
+    ],
+    "properties": {
+      "description": {
+        "type": "string"
+      },
+      "action": {
+        "type": "string"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "normalized": {
+        "type": "string"
+      }
+    }
+  }
+}

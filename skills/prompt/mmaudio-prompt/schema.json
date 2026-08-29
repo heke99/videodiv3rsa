@@ -1,0 +1,21 @@
+{
+  "input": {
+    "type": "object",
+    "properties": {
+      "shot": {
+        "type": "object"
+      },
+      "target_duration_samples": {
+        "type": "integer"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string"
+      }
+    }
+  }
+}

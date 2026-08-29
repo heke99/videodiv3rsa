@@ -1,0 +1,31 @@
+{
+  "input": {
+    "type": "object",
+    "properties": {
+      "shot": {
+        "type": "object"
+      },
+      "entities": {
+        "type": "object"
+      },
+      "mode": {
+        "type": "string",
+        "enum": [
+          "generate",
+          "edit"
+        ]
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string"
+      },
+      "negative_prompt": {
+        "type": "string"
+      }
+    }
+  }
+}

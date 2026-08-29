@@ -1,0 +1,24 @@
+{
+  "input": {
+    "type": "object",
+    "properties": {
+      "reason": {
+        "type": "string"
+      },
+      "previous_seed": {
+        "type": "integer"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "seed": {
+        "type": "integer"
+      },
+      "rationale": {
+        "type": "string"
+      }
+    }
+  }
+}

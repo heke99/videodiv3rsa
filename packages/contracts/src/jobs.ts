@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SchemaVersion, Slug, Uuid } from "./primitives.js";
+import { ModelId, SchemaVersion, Slug, Uuid } from "./primitives.js";
 
 /** Job status model (spec section 47) and the user-facing progress mapping. */
 export const JobStatus = z.enum([
@@ -154,7 +154,7 @@ export const SkillDescriptor = z.object({
   ]),
   description: z.string().min(1),
   required_tools: z.array(z.string()).default([]),
-  supported_models: z.array(Slug).default([]),
+  supported_models: z.array(ModelId).default([]),
   requires_skills: z.array(Slug).default([]),
   quality_profile: z.string().default("STANDARD"),
   timeout_seconds: z.number().int().positive().default(120),

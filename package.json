@@ -32,6 +32,7 @@
     "@videoai/orchestrator": "workspace:*",
     "@videoai/render": "workspace:*",
     "@videoai/scene-bible": "workspace:*",
+    "@videoai/skills": "workspace:*",
     "@videoai/storage": "workspace:*",
     "@videoai/timeline": "workspace:*",
     "tsup": "^8.3.5",

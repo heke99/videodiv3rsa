@@ -1,0 +1,21 @@
+{
+  "input": {
+    "type": "object",
+    "properties": {
+      "shot": {
+        "type": "object"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "strength": {
+        "type": "number"
+      },
+      "rationale": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RoutingRequest, RoutingRule } from "@videoai/contracts";
+import { ModelId, RoutingDecision, Slug } from "@videoai/contracts";
 import { checkLicenseGate, route, RoutingError, type RoutableModel } from "@videoai/models";
 
 /**
@@ -196,5 +197,34 @@ describe("model router", () => {
       expect((error as RoutingError).considered).toHaveLength(1);
       expect((error as Error).message).toContain("default-t2v");
     }
+  });
+});
+
+describe("model identifiers", () => {
+  // Real model ids carry the upstream family version, so they contain dots.
+  // Validating them as entity slugs rejected every model we actually ship,
+  // which went unnoticed because the router's own types are structural.
+  const REAL_IDS = ["wan2.2-t2v-a14b", "wan2.2-i2v-a14b", "wan2.2-s2v-14b", "qwen-image-2", "mmaudio"];
+
+  it("accepts the ids of the models we ship", () => {
+    for (const id of REAL_IDS) {
+      expect(ModelId.safeParse(id).success, id).toBe(true);
+    }
+  });
+
+  it("still rejects an id that could be a path or a header injection", () => {
+    for (const bad of ["../etc/passwd", "model id", "MODEL", "model\nid", ""]) {
+      expect(ModelId.safeParse(bad).success, bad).toBe(false);
+    }
+  });
+
+  it("keeps entity slugs strict, where a dot has no meaning", () => {
+    expect(Slug.safeParse("character_001").success).toBe(true);
+    expect(Slug.safeParse("wan2.2-t2v-a14b").success).toBe(false);
+  });
+
+  it("validates a routing decision carrying a real model id", () => {
+    const decision = route(request(), { rules: [defaultRule], models: [model()] });
+    expect(RoutingDecision.safeParse(decision).success).toBe(true);
   });
 });

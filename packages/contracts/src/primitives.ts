@@ -8,6 +8,12 @@ import { z } from "zod";
 export const Uuid = z.string().uuid();
 export const Slug = z.string().regex(/^[a-z0-9][a-z0-9_-]{0,62}$/);
 
+/**
+ * Model identifiers carry the upstream family version, so they contain dots
+ * that a Slug deliberately does not allow: "wan2.2-t2v-a14b", "qwen-image-2".
+ */
+export const ModelId = z.string().regex(/^[a-z0-9][a-z0-9._-]{0,62}$/);
+
 /** Every Director-facing schema carries the version it was produced against. */
 export const SchemaVersion = z.string().regex(/^\d+\.\d+$/);
 

@@ -1,0 +1,27 @@
+{
+  "input": {
+    "type": "object",
+    "required": [
+      "shot"
+    ],
+    "properties": {
+      "shot": {
+        "type": "object"
+      },
+      "style": {
+        "type": "object"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string"
+      },
+      "negative_prompt": {
+        "type": "string"
+      }
+    }
+  }
+}

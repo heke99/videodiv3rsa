@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   AssetRef,
   GpuProfile,
+  ModelId,
   Precision,
   QualityMode,
   Resolution,
@@ -75,7 +76,7 @@ export const ModelArtifact = z.object({
 });
 
 export const ModelVersionRecord = z.object({
-  model_id: Slug,
+  model_id: ModelId,
   version: z.string().min(1),
   adapter: z.string().min(1),
   runtime: z.string().min(1),
@@ -107,7 +108,7 @@ export const RoutingRequest = z.object({
 export type RoutingRequest = z.infer<typeof RoutingRequest>;
 
 export const RoutingDecision = z.object({
-  model_id: Slug,
+  model_id: ModelId,
   model_version: z.string().min(1),
   adapter: z.string().min(1),
   runtime: z.string().min(1),
@@ -139,7 +140,7 @@ export const RoutingRule = z.object({
     max_duration_frames: z.number().int().positive().optional(),
   }),
   target: z.object({
-    model_id: Slug,
+    model_id: ModelId,
     precision: Precision,
     generation_profile: z.string().min(1),
     qc_profile: z.string().min(1),
@@ -156,7 +157,7 @@ export const GenerateRequest = z.object({
   organization_id: Uuid,
   shot_id: Slug.nullable().default(null),
   attempt: z.number().int().positive().default(1),
-  model_id: Slug,
+  model_id: ModelId,
   model_version: z.string().min(1),
   precision: Precision,
   prompt: z.string().default(""),
@@ -189,7 +190,7 @@ export type GenerateResult = z.infer<typeof GenerateResult>;
 
 /** Full reproducibility record written for every generation (spec section 64). */
 export const GenerationProvenance = z.object({
-  model_id: Slug,
+  model_id: ModelId,
   model_version: z.string(),
   model_hash: Sha256.nullable(),
   adapter_version: z.string(),
@@ -223,7 +224,7 @@ export const CapabilitySnapshot = z.object({
   generated_at: z.string().datetime(),
   models: z.array(
     z.object({
-      model_id: Slug,
+      model_id: ModelId,
       version: z.string(),
       generation_kinds: z.array(GenerationKind),
       max_duration_frames: z.number().int().positive(),

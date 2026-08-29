@@ -1,0 +1,24 @@
+{
+  "input": {
+    "type": "object",
+    "properties": {
+      "line": {
+        "type": "object"
+      },
+      "voice": {
+        "type": "object"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string"
+      },
+      "delivery": {
+        "type": "object"
+      }
+    }
+  }
+}

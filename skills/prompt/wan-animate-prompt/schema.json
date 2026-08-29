@@ -1,0 +1,24 @@
+{
+  "input": {
+    "type": "object",
+    "properties": {
+      "shot": {
+        "type": "object"
+      },
+      "reference": {
+        "type": "object"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string"
+      },
+      "negative_prompt": {
+        "type": "string"
+      }
+    }
+  }
+}
