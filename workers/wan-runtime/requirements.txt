@@ -1,0 +1,7 @@
+# Pinned per runtime so an upgrade for one model family cannot break another
+# (spec section 54). Torch and diffusers are installed from the CUDA base image
+# layer; this file carries only what the service itself adds.
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pydantic==2.10.4
+numpy==2.2.1

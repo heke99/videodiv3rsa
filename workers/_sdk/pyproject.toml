@@ -1,0 +1,14 @@
+[project]
+name = "videoai-worker-sdk"
+version = "0.1.0"
+description = "Shared worker contract for VideoAI model runtimes"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

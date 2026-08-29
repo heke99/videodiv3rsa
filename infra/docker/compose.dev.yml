@@ -1,0 +1,88 @@
+# Local development stack.
+#
+# Everything except the model runtimes runs here. Nothing in this file needs a
+# GPU: the runtimes come up on a GPU host through infra/gpu/compose.worker.yml,
+# and locally they are exercised with the stub backend.
+name: videoai
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: videoai
+    ports: ["5432:5432"]
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  # Temporal is what makes long productions resumable: a crash during scene 8
+  # resumes at scene 8 rather than at the start (spec sections 48, 49).
+  temporal:
+    image: temporalio/auto-setup:1.26.2
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PWD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_SEEDS: postgres
+    ports: ["7233:7233"]
+
+  temporal-ui:
+    image: temporalio/ui:2.34.0
+    depends_on: [temporal]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    ports: ["8233:8080"]
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: api }
+    depends_on:
+      postgres: { condition: service_healthy }
+    env_file: [../../.env]
+    ports: ["8000:8000"]
+
+  orchestrator:
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: orchestrator }
+    depends_on: [temporal, api]
+    env_file: [../../.env]
+
+  gpu-manager:
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: gpu-manager }
+    depends_on:
+      postgres: { condition: service_healthy }
+    env_file: [../../.env]
+    ports: ["8001:8000"]
+
+  director:
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: director }
+    env_file: [../../.env]
+    ports: ["8002:8000"]
+
+  render:
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: render }
+    env_file: [../../.env]
+    volumes: ["render-scratch:/scratch"]
+
+volumes:
+  postgres-data:
+  render-scratch:

@@ -1,0 +1,83 @@
+# GPU host stack.
+#
+# Runs on the machine with the card. Each model family is its own container
+# with its own dependency set, and the supervisor is the only service that
+# talks to our control plane.
+#
+# Nothing here is exposed publicly: the runtimes listen on an internal network
+# and are reached through the signed gateway (spec section 77).
+name: videoai-worker
+
+x-runtime-common: &runtime-common
+  restart: unless-stopped
+  networks: [worker]
+  environment:
+    MODEL_ROOT: /models
+    GPU_GATEWAY_SIGNING_KEY: ${GPU_GATEWAY_SIGNING_KEY:?set GPU_GATEWAY_SIGNING_KEY}
+    LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  volumes:
+    # The model cache is a persistent volume, attached rather than baked in, so
+    # moving to new hardware does not mean re-downloading weights.
+    - ${MODEL_VOLUME:?set MODEL_VOLUME}:/models:ro
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+
+services:
+  runtime-wan:
+    <<: *runtime-common
+    image: ${REGISTRY:?set REGISTRY}/videoai-runtime-wan:${IMAGE_TAG:-latest}
+    environment:
+      MODEL_ROOT: /models
+      GPU_GATEWAY_SIGNING_KEY: ${GPU_GATEWAY_SIGNING_KEY:?set GPU_GATEWAY_SIGNING_KEY}
+      MODEL_ARTIFACTS: ${WAN_MODEL_ARTIFACTS:?set WAN_MODEL_ARTIFACTS}
+
+  runtime-qwen-image:
+    <<: *runtime-common
+    image: ${REGISTRY}/videoai-runtime-qwen-image:${IMAGE_TAG:-latest}
+
+  runtime-qwen-tts:
+    <<: *runtime-common
+    image: ${REGISTRY}/videoai-runtime-qwen-tts:${IMAGE_TAG:-latest}
+
+  runtime-mmaudio:
+    <<: *runtime-common
+    image: ${REGISTRY}/videoai-runtime-mmaudio:${IMAGE_TAG:-latest}
+
+  runtime-musetalk:
+    <<: *runtime-common
+    image: ${REGISTRY}/videoai-runtime-musetalk:${IMAGE_TAG:-latest}
+
+  runtime-qc:
+    <<: *runtime-common
+    image: ${REGISTRY}/videoai-runtime-qc:${IMAGE_TAG:-latest}
+
+  supervisor:
+    image: ${REGISTRY}/videoai-gpu-supervisor:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    networks: [worker, control]
+    environment:
+      WORKER_ID: ${WORKER_ID:?set WORKER_ID}
+      WORKER_ENDPOINT: ${WORKER_ENDPOINT:?set WORKER_ENDPOINT}
+      WORKER_RUNTIMES: runtime-wan,runtime-qwen-image,runtime-qwen-tts,runtime-mmaudio,runtime-musetalk,runtime-qc
+      GPU_CONTROL_PLANE_URL: ${GPU_CONTROL_PLANE_URL:?set GPU_CONTROL_PLANE_URL}
+      GPU_WORKER_TOKEN: ${GPU_WORKER_TOKEN:?set GPU_WORKER_TOKEN}
+      GPU_PROVIDER: ${GPU_PROVIDER:-manual}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+networks:
+  # Runtimes can reach each other and the supervisor, and nothing else. After
+  # provisioning a worker has no reason to reach the internet at all.
+  worker:
+    internal: true
+  control:
