@@ -37,6 +37,25 @@ export async function ffmpeg(args: string[], timeoutMs = 30 * 60_000): Promise<s
   }
 }
 
+/**
+ * Run ffmpeg and return stdout.
+ *
+ * The metadata and stats_file filters write to stdout rather than stderr,
+ * which is where every per-frame measurement comes from. Reading the wrong
+ * stream returns an empty series and every metric silently comes out as zero.
+ */
+export async function ffmpegStdout(args: string[], timeoutMs = 30 * 60_000): Promise<string> {
+  try {
+    const { stdout } = await exec(FFMPEG, ["-hide_banner", "-nostdin", "-y", ...args], {
+      timeout: timeoutMs,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    return stdout;
+  } catch (error) {
+    throw new FfmpegError("ffmpeg failed", String((error as { stderr?: string }).stderr ?? error));
+  }
+}
+
 export async function ffprobe(args: string[]): Promise<string> {
   try {
     const { stdout } = await exec(FFPROBE, ["-hide_banner", ...args], {

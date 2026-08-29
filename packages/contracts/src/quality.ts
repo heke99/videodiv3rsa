@@ -35,6 +35,10 @@ export const RepairScope = z.enum([
   "lipsync",
   "audio",
   "timing",
+  // Rebuilding captions or re-running an upscale touch no generation at all,
+  // so they are the cheapest scopes available and deserve to be nameable.
+  "caption",
+  "upscale",
   "frame",
   "keyframe",
   "shot",

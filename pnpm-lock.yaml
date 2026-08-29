@@ -41,6 +41,12 @@ importers:
       '@videoai/orchestrator':
         specifier: workspace:*
         version: link:services/orchestrator
+      '@videoai/qc':
+        specifier: workspace:*
+        version: link:services/qc
+      '@videoai/quality':
+        specifier: workspace:*
+        version: link:packages/quality
       '@videoai/render':
         specifier: workspace:*
         version: link:services/render
@@ -129,6 +135,18 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+
+  packages/quality:
+    dependencies:
+      '@videoai/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@videoai/render':
+        specifier: workspace:*
+        version: link:../../services/render
+      '@videoai/timeline':
+        specifier: workspace:*
+        version: link:../timeline
 
   packages/scene-bible:
     dependencies:
@@ -288,6 +306,21 @@ importers:
       '@videoai/timeline':
         specifier: workspace:*
         version: link:../../packages/timeline
+
+  services/qc:
+    dependencies:
+      '@videoai/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@videoai/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@videoai/quality':
+        specifier: workspace:*
+        version: link:../../packages/quality
+      '@videoai/render':
+        specifier: workspace:*
+        version: link:../render
 
   services/render:
     dependencies:

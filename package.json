@@ -16,7 +16,8 @@
     "test:integration": "vitest run tests/integration",
     "lint": "turbo run lint",
     "db:migrate": "tsx infra/database/migrate.ts",
-    "registry:sync": "tsx packages/skills/scripts/sync-registry.ts"
+    "registry:sync": "tsx packages/skills/scripts/sync-registry.ts",
+    "test:quality": "vitest run tests/quality"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
@@ -30,6 +31,8 @@
     "@videoai/media": "workspace:*",
     "@videoai/models": "workspace:*",
     "@videoai/orchestrator": "workspace:*",
+    "@videoai/qc": "workspace:*",
+    "@videoai/quality": "workspace:*",
     "@videoai/render": "workspace:*",
     "@videoai/scene-bible": "workspace:*",
     "@videoai/skills": "workspace:*",
