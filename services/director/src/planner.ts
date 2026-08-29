@@ -10,6 +10,7 @@ import {
   type Shot,
 } from "@videoai/contracts";
 import { deriveDependencies, validatePlanGraph } from "@videoai/scene-bible";
+import { composeInstructions, selectSkills, type SkillPackage, type SkillSelection } from "@videoai/skills";
 import { secondsToFrames, type Rational } from "@videoai/timeline";
 import type { Director } from "./adapter.js";
 import {
@@ -32,6 +33,40 @@ import {
 export interface PlanningContext {
   capabilities: CapabilitySnapshot;
   timebase: Rational;
+  /**
+   * The skill catalogue, if one is loaded. Optional because the planner has to
+   * stay runnable without a filesystem full of skills -- a missing catalogue
+   * means the base prompts, not a failure.
+   */
+  skills?: Map<string, SkillPackage>;
+  /** Skills the routing decision named for this work. Always included. */
+  required_skills?: string[];
+  /** Called with what was selected, so the selection can be recorded. */
+  onSkillsSelected?(stage: string, selected: SkillPackage[]): void | Promise<void>;
+}
+
+/**
+ * Build the system prompt for one planning stage.
+ *
+ * The selected skills go first and the stage's own contract last, so nothing a
+ * skill says can talk the Director out of the output schema it has to satisfy.
+ * `composeInstructions` emits only each skill's body: eval content stays out of
+ * production prompts, because a model shown its test cases learns to reproduce
+ * them (spec section 22).
+ */
+async function systemFor(
+  base: string,
+  stage: string,
+  selection: SkillSelection,
+  ctx: PlanningContext,
+): Promise<string> {
+  if (!ctx.skills || ctx.skills.size === 0) return base;
+
+  const selected = selectSkills({ ...selection, required: ctx.required_skills }, ctx.skills);
+  if (ctx.onSkillsSelected) await ctx.onSkillsSelected(stage, selected);
+  if (selected.length === 0) return base;
+
+  return `${composeInstructions(selected)}\n\n${base}`;
 }
 
 export class Planner {
@@ -71,7 +106,7 @@ export class Planner {
     return this.director.plan({
       output: "scene_bible",
       schema: SceneBible,
-      system: SCENE_BIBLE_SYSTEM,
+      system: await systemFor(SCENE_BIBLE_SYSTEM, "scene_bible", { quality_mode: brief.quality_mode }, ctx),
       capabilities: ctx.capabilities,
       user: `Write the Scene Bible for this brief:\n\n${JSON.stringify(brief, null, 2)}`,
     });
@@ -106,7 +141,13 @@ export class Planner {
     const plan = await this.director.plan({
       output: "shot_plan",
       schema: ShotPlan,
-      system: SHOT_PLAN_SYSTEM,
+      system: await systemFor(SHOT_PLAN_SYSTEM, "shot_plan", {
+        quality_mode: brief.quality_mode,
+        has_dialogue: script.dialogue.length > 0 || script.narration.length > 0,
+        has_humans: bible.characters.length > 0,
+        has_product: bible.products.length > 0,
+        requires_identity_lock: bible.characters.length > 0,
+      }, ctx),
       capabilities: ctx.capabilities,
       user: [
         `Brief:\n${JSON.stringify(brief, null, 2)}`,
@@ -127,7 +168,14 @@ export class Planner {
     return this.director.plan({
       output: "repair_plan",
       schema: RepairPlan,
-      system: REPAIR_SYSTEM,
+      system: await systemFor(REPAIR_SYSTEM, "repair_plan", {
+        quality_mode: evaluation.quality_profile,
+        generation_kind: shot.preferred_generation_kind,
+        has_dialogue: shot.dialogue_line_ids.length > 0,
+        has_humans: shot.character_ids.length > 0,
+        has_product: shot.product_ids.length > 0,
+        requires_identity_lock: shot.requires_identity_lock,
+      }, ctx),
       capabilities: ctx.capabilities,
       temperature: 0.2,
       user: [

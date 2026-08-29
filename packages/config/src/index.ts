@@ -45,6 +45,8 @@ const BaseSchema = z.object({
   GPU_GATEWAY_SIGNING_KEY: z.string().min(32),
   GPU_ENVELOPE_TTL_SECONDS: z.coerce.number().int().positive().default(120),
   MODEL_ROOT: z.string().min(1),
+  /** Where the skill packages live. No default: it is a deployment path. */
+  SKILLS_ROOT: z.string().min(1),
   MODEL_REGISTRY_MODE: z.enum(["strict", "permissive"]).default("strict"),
 
   // Orchestration

@@ -214,6 +214,8 @@ describe("skill routing", () => {
     ["color-director", pkg("color-director")],
     ["character-identity-lock", pkg("character-identity-lock")],
     ["face-consistency", pkg("face-consistency")],
+    ["speech-director", pkg("speech-director")],
+    ["dialogue-timing", pkg("dialogue-timing")],
     ["unwritten", pkg("unwritten", { status: "draft" })],
   ]);
 
@@ -263,6 +265,25 @@ describe("skill routing", () => {
       catalogue,
     ).map((s) => s.skill_id);
     expect(ids).toContain("face-consistency");
+  });
+
+  it("keeps the shot's own specialists over the mode's spine when over the cap", () => {
+    // CINEMATIC brings five cinematography skills before any conditional is
+    // considered, so a flat cut would drop the speech and identity skills a
+    // dialogue shot with a locked face actually needs.
+    const ids = selectSkills(
+      {
+        quality_mode: "CINEMATIC",
+        has_dialogue: true,
+        requires_identity_lock: true,
+        limit: 6,
+      },
+      catalogue,
+    ).map((s) => s.skill_id);
+
+    expect(ids).toHaveLength(6);
+    expect(ids).toContain("speech-director");
+    expect(ids).toContain("character-identity-lock");
   });
 
   it("composes instructions without leaking eval content", () => {

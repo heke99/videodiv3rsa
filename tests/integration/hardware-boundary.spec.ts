@@ -30,6 +30,7 @@ const ENV: Record<string, string> = {
   GPU_PROVIDER: "manual",
   GPU_GATEWAY_SIGNING_KEY: "0".repeat(64),
   MODEL_ROOT: "/tmp/videoai-models",
+  SKILLS_ROOT: "skills",
   TEMPORAL_ADDRESS: "127.0.0.1:7233",
   DIRECTOR_MODEL: "local/director",
   DIRECTOR_ENDPOINT: "http://127.0.0.1:1/v1",

@@ -51,10 +51,11 @@ export function selectSkills(
   selection: SkillSelection,
   available: Map<string, SkillPackage>,
 ): SkillPackage[] {
+  const conditional = CONDITIONAL.filter((c) => c.when(selection)).flatMap((c) => c.skills);
   const wanted: string[] = [
     ...ALWAYS,
     ...(MODE_SKILLS[selection.quality_mode] ?? MODE_SKILLS["STANDARD"]!),
-    ...CONDITIONAL.filter((c) => c.when(selection)).flatMap((c) => c.skills),
+    ...conditional,
     ...(selection.required ?? []),
   ];
 
@@ -78,11 +79,14 @@ export function selectSkills(
   const limit = selection.limit ?? 12;
   if (resolved.length <= limit) return resolved;
 
-  // When over budget, keep the skills the routing decision explicitly named
-  // and their dependencies, then fill with the rest in order.
-  const required = new Set(selection.required ?? []);
-  const priority = resolved.filter((s) => required.has(s.skill_id));
-  const filler = resolved.filter((s) => !required.has(s.skill_id));
+  // When over budget, keep what this shot specifically needs before what its
+  // mode generally prefers: the skills the routing decision named, and the
+  // specialists the shot's own contents pulled in. A dialogue shot that loses
+  // its speech skills to five cinematography skills is the wrong trade, and it
+  // is the trade a flat cut makes, because the mode spine comes first in order.
+  const priorityIds = new Set([...(selection.required ?? []), ...conditional]);
+  const priority = resolved.filter((s) => priorityIds.has(s.skill_id));
+  const filler = resolved.filter((s) => !priorityIds.has(s.skill_id));
   return [...priority, ...filler].slice(0, limit);
 }
 

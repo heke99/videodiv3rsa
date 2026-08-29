@@ -13,6 +13,7 @@ import { query, queryOne, transaction } from "@videoai/database";
 import { Director, LocalReasoningBackend, Planner, preflight } from "@videoai/director";
 import { buildCapabilitySnapshot, loadRoutableModels, loadRoutingRules, route } from "@videoai/models";
 import { availableProfiles } from "@videoai/gpu-manager";
+import { loadCatalogue, recordSkillRun, type SkillPackage } from "@videoai/skills";
 
 import {
   buildTimeline as buildTimelineActivity,
@@ -56,6 +57,17 @@ export const HARDWARE_BOUND_ACTIVITIES = [
 export function createActivities(): Activities {
   const cfg = config();
   const planner = new Planner(new Director(LocalReasoningBackend.fromConfig(cfg)));
+
+  /**
+   * The skill catalogue, read from disk once per worker.
+   *
+   * Cached as the promise rather than the value so concurrent activities share
+   * one read, and held as a rejected promise on failure so a broken catalogue
+   * is reported every time instead of silently retrying the filesystem under
+   * every job.
+   */
+  let catalogue: Promise<Map<string, SkillPackage>> | null = null;
+  const skills = () => (catalogue ??= loadCatalogue(cfg.SKILLS_ROOT));
 
   return {
     async loadCapabilitySnapshot({ organization_id: _organizationId }) {
@@ -242,8 +254,8 @@ export function createActivities(): Activities {
     async runJudges(input) {
       return judgePanel(input);
     },
-    async planRepair({ job_id, shot, evaluation }) {
-      return planner.repairPlan(evaluation, shot, await planningContext(job_id));
+    async planRepair({ job_id, shot, evaluation, required_skills }) {
+      return planner.repairPlan(evaluation, shot, await planningContext(job_id, required_skills));
     },
 
     async buildTimeline(input) {
@@ -371,7 +383,7 @@ export function createActivities(): Activities {
     return job;
   }
 
-  async function planningContext(jobId: string) {
+  async function planningContext(jobId: string, requiredSkills: string[] = []) {
     const job = await requireJob(jobId);
     const project = await queryOne<{ frame_rate_num: number; frame_rate_den: number }>(
       "select frame_rate_num, frame_rate_den from public.projects where id = $1",
@@ -380,6 +392,22 @@ export function createActivities(): Activities {
     return {
       capabilities: await capabilities(job.organization_id),
       timebase: { num: project?.frame_rate_num ?? 24, den: project?.frame_rate_den ?? 1 },
+      skills: await skills(),
+      required_skills: requiredSkills,
+      // Recorded per selection so the admin Skills page reflects what the
+      // Director was actually given, rather than what the catalogue contains.
+      onSkillsSelected: async (stage: string, selected: SkillPackage[]) => {
+        for (const skill of selected) {
+          await recordSkillRun({
+            organization_id: job.organization_id,
+            job_id: jobId,
+            skill_id: skill.skill_id,
+            skill_version: skill.descriptor.version,
+            status: "pass",
+            result: { stage },
+          });
+        }
+      },
     };
   }
 

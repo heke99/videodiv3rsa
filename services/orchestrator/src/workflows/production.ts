@@ -290,7 +290,12 @@ export async function production(input: ProductionInput): Promise<ProductionResu
         if (!checkBudget(budget, working).ok) break;
 
         await advance("repairing");
-        const repairPlan = await activities.planRepair({ job_id: input.job_id, shot, evaluation });
+        const repairPlan = await activities.planRepair({
+          job_id: input.job_id,
+          shot,
+          evaluation,
+          required_skills: decision.skills,
+        });
         if (repairPlan.scope === "none" || repairPlan.scope === "shot") break;
 
         const repaired = await activities.applyRepair({

@@ -5,9 +5,15 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
-  "scripts": { "build": "tsup src/index.ts --format esm --dts", "typecheck": "tsc --noEmit" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
+    "@videoai/config": "workspace:*",
     "@videoai/contracts": "workspace:*",
     "@videoai/database": "workspace:*",
     "yaml": "^2.6.1",

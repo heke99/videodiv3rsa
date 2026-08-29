@@ -212,6 +212,9 @@ importers:
 
   packages/skills:
     dependencies:
+      '@videoai/config':
+        specifier: workspace:*
+        version: link:../config
       '@videoai/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -317,6 +320,9 @@ importers:
       '@videoai/scene-bible':
         specifier: workspace:*
         version: link:../../packages/scene-bible
+      '@videoai/skills':
+        specifier: workspace:*
+        version: link:../../packages/skills
       '@videoai/timeline':
         specifier: workspace:*
         version: link:../../packages/timeline

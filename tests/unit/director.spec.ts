@@ -8,6 +8,7 @@ import {
   reconcileDurations,
   type DirectorBackend,
 } from "@videoai/director";
+import { loadCatalogue } from "@videoai/skills";
 
 /**
  * The Director is the one component that can produce anything, so what is
@@ -32,13 +33,18 @@ const capabilities: CapabilitySnapshot = {
 const timebase = { num: 24, den: 1 };
 
 /** A backend that replays canned responses, so planning is deterministic. */
-function fixtureBackend(responses: string[]): DirectorBackend & { calls: string[] } {
+function fixtureBackend(
+  responses: string[],
+): DirectorBackend & { calls: string[]; systems: string[] } {
   const calls: string[] = [];
+  const systems: string[] = [];
   let index = 0;
   return {
     calls,
+    systems,
     async complete(params) {
       calls.push(params.user);
+      systems.push(params.system);
       return responses[Math.min(index++, responses.length - 1)]!;
     },
   };
@@ -220,6 +226,104 @@ describe("preflight", () => {
 
   it("labels its numbers as estimates", () => {
     expect(preflight(base).is_estimate).toBe(true);
+  });
+});
+
+describe("skills reaching the Director", () => {
+  const repairEvaluation = {
+    schema_version: "1.0" as const,
+    subject_kind: "shot" as const,
+    subject_id: "shot_01",
+    quality_profile: "CINEMATIC" as const,
+    overall: 0.4,
+    scores: {},
+    judges: [],
+    passed: false,
+  };
+
+  const shot: Shot = {
+    id: "shot_01", scene_id: "scene_01", index: 0,
+    description: "d", action: "a", shot_type: "medium", duration_frames: 48,
+    camera: { framing: "medium", lens: "", movement: "static", height: "eye_level", focus_behavior: "" },
+    character_ids: ["c1"], product_ids: [], location_id: null, dialogue_line_ids: ["line_1"],
+    motion_complexity: 0.5, continuity_requirement: 0.5,
+    requires_identity_lock: true, requires_product_fidelity: false,
+    preferred_generation_kind: "text_to_video",
+    start_frame_asset: null, end_frame_asset: null, notes: "",
+  };
+
+  const validRepair = JSON.stringify({
+    schema_version: "1.0",
+    subject_id: "shot_01",
+    scope: "frame",
+    actions: [
+      { action: "prompt_repair", target_id: "shot_01", rationale: "the framing drifted", params: {} },
+    ],
+    addressed_findings: [],
+    estimated_gpu_seconds: 0,
+  });
+
+  it("puts the selected skills' bodies in the system prompt", async () => {
+    const catalogue = await loadCatalogue("skills");
+    const backend = fixtureBackend([validRepair]);
+    const planner = new Planner(new Director(backend));
+    const selected: string[] = [];
+
+    await planner.repairPlan(repairEvaluation, shot, {
+      capabilities,
+      timebase,
+      skills: catalogue,
+      onSkillsSelected: (_stage, skills) => {
+        selected.push(...skills.map((s) => s.skill_id));
+      },
+    });
+
+    // The shot locks identity and has dialogue, so the specialists for both
+    // must be pulled in rather than only the mode's spine.
+    expect(selected).toContain("character-identity-lock");
+    expect(selected).toContain("speech-director");
+
+    const system = backend.systems[0]!;
+    for (const id of selected) {
+      const skill = catalogue.get(id)!;
+      expect(system).toContain(skill.body.trim().split("\n")[0]!);
+    }
+    // The stage's own contract stays last, so no skill can displace it.
+    expect(system.indexOf("repair")).toBeGreaterThan(0);
+  });
+
+  it("never puts eval content in a production prompt", async () => {
+    const catalogue = await loadCatalogue("skills");
+    const backend = fixtureBackend([validRepair]);
+    const planner = new Planner(new Director(backend));
+    const selected: string[] = [];
+
+    await planner.repairPlan(repairEvaluation, shot, {
+      capabilities,
+      timebase,
+      skills: catalogue,
+      onSkillsSelected: (_stage, skills) => {
+        selected.push(...skills.map((s) => s.skill_id));
+      },
+    });
+
+    const system = backend.systems[0]!;
+    const withEvals = selected.map((id) => catalogue.get(id)!).filter((s) => s.eval !== null);
+    // Worth asserting the fixture is real: a vacuous pass here would hide the
+    // regression it exists to catch.
+    expect(withEvals.length).toBeGreaterThan(0);
+    for (const skill of withEvals) {
+      for (const line of skill.eval!.split("\n").map((l) => l.trim()).filter((l) => l.length > 20)) {
+        expect(system).not.toContain(line);
+      }
+    }
+  });
+
+  it("plans on the base prompts when no catalogue is loaded", async () => {
+    const backend = fixtureBackend([validRepair]);
+    const planner = new Planner(new Director(backend));
+    await planner.repairPlan(repairEvaluation, shot, { capabilities, timebase });
+    expect(backend.systems[0]).not.toContain("## ");
   });
 });
 

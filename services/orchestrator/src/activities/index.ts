@@ -89,6 +89,8 @@ export interface Activities {
     job_id: string;
     shot: Shot;
     evaluation: QualityEvaluation;
+    /** Skills the routing decision named for this shot's model. */
+    required_skills?: string[];
   }): Promise<RepairPlan>;
   applyRepair(input: {
     job_id: string;
