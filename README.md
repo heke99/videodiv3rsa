@@ -10,15 +10,20 @@ No generation goes to an external API. There is no fallback that does.
 
 ## Status
 
-Batches 1 to 5 of the build plan are implemented: foundation, GPU platform,
-Wan runtime, media specialists, and the Director with its planning pipeline.
-Batches 6 to 12 — the timeline editor, the full skill catalogue, the judge
-ensemble, the admin UI and the benchmark suite — have their boundaries defined
-and are follow-on work.
+All twelve batches of the build plan are implemented. See
+[docs/PRODUCTION_GATE.md](docs/PRODUCTION_GATE.md) for the Definition of Done
+with each item marked done, blocked on hardware, or not built.
 
-GPU-backed generation is written against the worker contract and is unverified
-until hardware is attached. Those paths fail with a clear error rather than
-returning something that looks like a result.
+Two things block production, and they are the same thing: no GPU is attached,
+so every generation path is written and contract-tested but has never produced
+a frame; and the vision half of the judge ensemble needs that GPU, so identity,
+hands and lip sync are registered and report themselves unavailable rather than
+returning a score nobody measured.
+
+Everything that does not need hardware is built and verified: the exact
+timebase, the Director and its planning pipeline, the skill engine and
+catalogue, the measured judges, the repair engine, the web and admin apps, and
+row level security checked against a live database.
 
 ## Getting started
 
@@ -44,11 +49,14 @@ docker compose -f infra/gpu/compose.worker.yml up -d
 ## Tests
 
 ```bash
-pnpm test               # everything
-pnpm test:unit          # contracts, timebase, routing, budgets, Director
-pnpm test:security      # no external providers, upload validation, RLS
+pnpm test               # everything except e2e
+pnpm test:unit          # contracts, timebase, routing, budgets, Director, skills
+pnpm test:quality       # judges against deliberately degraded fixtures
+pnpm test:security      # no external providers, upload validation
 pnpm test:portability   # no hardcoded domain, provider, bucket or model path
+pnpm test:e2e           # the built app in a real browser
 .venv/bin/python -m pytest tests/gpu   # worker contract, no GPU required
+psql "$DATABASE_URL" -f tests/security/rls.sql   # 29 policy checks, rolls back
 ```
 
 Two of these are standing guarantees rather than ordinary tests.
