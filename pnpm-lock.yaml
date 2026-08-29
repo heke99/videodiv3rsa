@@ -365,6 +365,9 @@ importers:
       '@temporalio/workflow':
         specifier: ^1.11.6
         version: 1.23.0
+      '@videoai/assets':
+        specifier: workspace:*
+        version: link:../../packages/assets
       '@videoai/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -383,9 +386,15 @@ importers:
       '@videoai/models':
         specifier: workspace:*
         version: link:../../packages/models
+      '@videoai/quality':
+        specifier: workspace:*
+        version: link:../../packages/quality
       '@videoai/render':
         specifier: workspace:*
         version: link:../render
+      '@videoai/skills':
+        specifier: workspace:*
+        version: link:../../packages/skills
       '@videoai/storage':
         specifier: workspace:*
         version: link:../../packages/storage

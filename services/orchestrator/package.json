@@ -18,13 +18,16 @@
     "@temporalio/client": "^1.11.6",
     "@temporalio/worker": "^1.11.6",
     "@temporalio/workflow": "^1.11.6",
+    "@videoai/assets": "workspace:*",
     "@videoai/config": "workspace:*",
     "@videoai/contracts": "workspace:*",
     "@videoai/database": "workspace:*",
     "@videoai/director": "workspace:*",
     "@videoai/gpu-manager": "workspace:*",
     "@videoai/models": "workspace:*",
+    "@videoai/quality": "workspace:*",
     "@videoai/render": "workspace:*",
+    "@videoai/skills": "workspace:*",
     "@videoai/storage": "workspace:*",
     "@videoai/timeline": "workspace:*"
   }

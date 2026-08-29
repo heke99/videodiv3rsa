@@ -14,6 +14,13 @@ import { Director, LocalReasoningBackend, Planner, preflight } from "@videoai/di
 import { buildCapabilitySnapshot, loadRoutableModels, loadRoutingRules, route } from "@videoai/models";
 import { availableProfiles } from "@videoai/gpu-manager";
 
+import {
+  buildTimeline as buildTimelineActivity,
+  composeFinal as composeFinalActivity,
+  exportRenders as exportRendersActivity,
+  judgePanel,
+  technicalQc,
+} from "./delivery.js";
 import type { Activities } from "./index.js";
 
 /**
@@ -26,8 +33,26 @@ import type { Activities } from "./index.js";
  *
  * The GPU-backed activities dispatch through the signed gateway. They are
  * written but unexercised until hardware exists, and are marked as such rather
- * than pretending otherwise.
+ * than pretending otherwise. That marking is reserved for work that genuinely
+ * needs a GPU: technical QC, the measured judges, timeline assembly,
+ * composition and export are ffmpeg and arithmetic, and run here.
  */
+/**
+ * The activities that genuinely cannot run without a GPU.
+ *
+ * Exported so the claim is testable: everything named here must fail with
+ * `NoGpuWorker`, and everything not named here must not, which is what stops
+ * the list drifting back into covering work that only looks expensive.
+ */
+export const HARDWARE_BOUND_ACTIVITIES = [
+  "generateDialogue",
+  "alignDialogue",
+  "generateAmbience",
+  "generateReferences",
+  "generateShot",
+  "applyRepair",
+] as const satisfies ReadonlyArray<keyof Activities>;
+
 export function createActivities(): Activities {
   const cfg = config();
   const planner = new Planner(new Director(LocalReasoningBackend.fromConfig(cfg)));
@@ -206,27 +231,29 @@ export function createActivities(): Activities {
     async generateShot() {
       throw notYetOnHardware("shot generation");
     },
-    async runJudges() {
-      throw notYetOnHardware("the judge ensemble");
-    },
     async applyRepair() {
       throw notYetOnHardware("repair");
     },
-    async runTechnicalQc() {
-      throw notYetOnHardware("technical QC dispatch");
+
+    // -- CPU bound. Measurement, arithmetic and ffmpeg; no GPU involved.
+    async runTechnicalQc(input) {
+      return technicalQc(input);
+    },
+    async runJudges(input) {
+      return judgePanel(input);
     },
     async planRepair({ job_id, shot, evaluation }) {
       return planner.repairPlan(evaluation, shot, await planningContext(job_id));
     },
 
-    async buildTimeline() {
-      throw notYetOnHardware("timeline assembly from generated shots");
+    async buildTimeline(input) {
+      return buildTimelineActivity(input);
     },
-    async composeFinal() {
-      throw notYetOnHardware("final composition");
+    async composeFinal(input) {
+      return composeFinalActivity(input);
     },
-    async exportRenders() {
-      throw notYetOnHardware("export");
+    async exportRenders(input) {
+      return exportRendersActivity(input);
     },
 
     // -- bookkeeping -------------------------------------------------------
