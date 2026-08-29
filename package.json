@@ -18,7 +18,8 @@
     "db:migrate": "tsx infra/database/migrate.ts",
     "registry:sync": "tsx packages/skills/scripts/sync-registry.ts",
     "test:quality": "vitest run tests/quality",
-    "dev:web": "pnpm --filter @videoai/web dev"
+    "dev:web": "pnpm --filter @videoai/web dev",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
@@ -41,6 +42,7 @@
     "@videoai/telemetry": "workspace:*",
     "@videoai/timeline": "workspace:*",
     "@videoai/usage": "workspace:*",
+    "playwright": "^1.49.1",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "turbo": "^2.3.3",
