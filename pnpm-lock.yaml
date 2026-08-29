@@ -26,6 +26,9 @@ importers:
       '@videoai/models':
         specifier: workspace:*
         version: link:packages/models
+      '@videoai/render':
+        specifier: workspace:*
+        version: link:services/render
       '@videoai/scene-bible':
         specifier: workspace:*
         version: link:packages/scene-bible
@@ -141,6 +144,15 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+
+  services/render:
+    dependencies:
+      '@videoai/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@videoai/timeline':
+        specifier: workspace:*
+        version: link:../../packages/timeline
 
 packages:
 

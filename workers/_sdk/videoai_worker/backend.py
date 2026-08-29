@@ -20,7 +20,7 @@ import hashlib
 import os
 from dataclasses import dataclass, field
 
-from videoai_worker import GenerateRequest
+from .contract import GenerateRequest
 
 
 @dataclass
@@ -69,8 +69,14 @@ class InferenceBackend(abc.ABC):
         # frames and in pixels. Callers must treat this as an estimate.
         return frames * (pixels / (720 * 1280)) * 1.6
 
+    #: Resident size in GiB per model, filled in by each runtime and refined
+    #: by benchmarks once hardware exists.
+    vram_gib: dict[str, int] = {}
+
     def estimate_vram(self, model_id: str, precision: str) -> int:
-        base = 80 if "a14b" in model_id else 60
+        base = self.vram_gib.get(model_id, 16)
+        # FP8 roughly halves weight residency; activations do not shrink as
+        # much, so this is deliberately conservative rather than 0.5.
         if precision == "fp8":
             base = int(base * 0.6)
         return base * 1024**3

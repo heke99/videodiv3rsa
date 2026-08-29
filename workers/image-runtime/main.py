@@ -1,0 +1,22 @@
+"""Entry point for the image-runtime container."""
+
+from __future__ import annotations
+
+import logging
+import os
+
+import uvicorn
+from videoai_worker import create_app
+
+from image_runtime.adapter import ADAPTER
+
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())
+
+app = create_app(ADAPTER())
+
+if __name__ == "__main__":
+    uvicorn.run(
+        app,
+        host=os.environ.get("WORKER_BIND", "0.0.0.0"),
+        port=int(os.environ.get("WORKER_PORT", "8080")),
+    )

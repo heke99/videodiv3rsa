@@ -20,7 +20,7 @@ import pytest
 from videoai_worker import GenerateRequest, Resolution, verify_artifacts
 from videoai_worker.models import ArtifactVerificationError
 from wan_runtime.adapter import WanAdapter
-from wan_runtime.backend import CudaBackend, StubBackend
+from videoai_worker.backend import CudaBackend, StubBackend
 
 
 def request(**overrides) -> GenerateRequest:
@@ -56,8 +56,14 @@ class TestValidation:
             await adapter.generate(request(duration_frames=400))
 
     async def test_speech_driven_model_requires_driving_audio(self, adapter):
-        with pytest.raises(ValueError, match="needs aligned dialogue audio"):
+        with pytest.raises(ValueError, match="needs driving audio"):
             await adapter.generate(request(model_id="wan2.2-s2v-14b"))
+
+    async def test_reference_driven_model_requires_a_reference(self, adapter):
+        # Without its reference an I2V model quietly behaves like T2V and
+        # identity drifts, which is worse than refusing.
+        with pytest.raises(ValueError, match="needs at least one reference image"):
+            await adapter.generate(request(model_id="wan2.2-i2v-a14b"))
 
 
 class TestDeterminismAndIdempotency:
