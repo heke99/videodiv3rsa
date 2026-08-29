@@ -37,6 +37,11 @@ jobs:
       - run: pnpm build
       - run: pnpm test
 
+      # The browser suite builds the web app itself, so it needs a browser and
+      # nothing else. It is the only check that reads the UI the way a user does.
+      - run: npx playwright install --with-deps chromium
+      - run: pnpm test:e2e
+
   python:
     runs-on: ubuntu-latest
     steps:

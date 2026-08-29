@@ -101,6 +101,20 @@ createServer((req, res) => {
 }).listen(${API_PORT});
 `;
 
+/** Run a command to completion, failing loudly with its output. */
+async function run(command: string, args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(command, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+    let output = "";
+    child.stdout?.on("data", (chunk: Buffer) => (output += chunk.toString()));
+    child.stderr?.on("data", (chunk: Buffer) => (output += chunk.toString()));
+    child.on("error", reject);
+    child.on("exit", (code) =>
+      code === 0 ? resolve() : reject(new Error(`${command} ${args.join(" ")} failed:\n${output}`)),
+    );
+  });
+}
+
 async function waitFor(url: string, timeoutMs = 90_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -151,14 +165,23 @@ beforeAll(async () => {
 
   api = spawn("node", [stubPath], { stdio: "ignore" });
 
+  const webEnv = {
+    ...process.env,
+    NEXT_PUBLIC_API_URL: `http://localhost:${API_PORT}`,
+    NEXT_PUBLIC_APP_NAME: "Video AI",
+  };
+  const webDir = path.join(ROOT, "apps/web");
+
+  // Built here rather than relying on whatever .next happens to be lying
+  // around. NEXT_PUBLIC_* is inlined into the client bundle at build time, so
+  // an app built without these reaches the browser with no API URL at all --
+  // and the test then measures a build nobody in this file configured.
+  await run("npx", ["next", "build"], webDir, webEnv);
+
   web = spawn("npx", ["next", "start", "--port", String(WEB_PORT)], {
-    cwd: path.join(ROOT, "apps/web"),
+    cwd: webDir,
     stdio: "ignore",
-    env: {
-      ...process.env,
-      NEXT_PUBLIC_API_URL: `http://localhost:${API_PORT}`,
-      NEXT_PUBLIC_APP_NAME: "Video AI",
-    },
+    env: webEnv,
   });
 
   await waitFor(`http://localhost:${API_PORT}/api/projects`);
@@ -169,7 +192,7 @@ beforeAll(async () => {
   // directly rather than fetching another copy.
   const provided = "/opt/pw-browsers/chromium";
   browser = await chromium.launch(existsSync(provided) ? { executablePath: provided } : {});
-}, 180_000);
+}, 300_000);
 
 afterAll(async () => {
   await browser?.close();
