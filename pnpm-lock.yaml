@@ -20,6 +20,9 @@ importers:
       '@videoai/database':
         specifier: workspace:*
         version: link:packages/database
+      '@videoai/director':
+        specifier: workspace:*
+        version: link:services/director
       '@videoai/gpu-manager':
         specifier: workspace:*
         version: link:services/gpu-manager
@@ -126,6 +129,24 @@ importers:
       '@videoai/contracts':
         specifier: workspace:*
         version: link:../contracts
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  services/director:
+    dependencies:
+      '@videoai/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@videoai/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@videoai/scene-bible':
+        specifier: workspace:*
+        version: link:../../packages/scene-bible
+      '@videoai/timeline':
+        specifier: workspace:*
+        version: link:../../packages/timeline
       zod:
         specifier: ^3.24.1
         version: 3.25.76
