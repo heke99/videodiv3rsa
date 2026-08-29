@@ -3,6 +3,7 @@ import { z } from "zod";
 import { config } from "@videoai/config";
 import { AuthError, authenticate } from "./auth.js";
 import { UploadRejected } from "./uploads.js";
+import { adminRoutes } from "./routes/admin.js";
 import { assetRoutes } from "./routes/assets.js";
 import { exportRoutes } from "./routes/exports.js";
 import { libraryRoutes } from "./routes/library.js";
@@ -47,6 +48,7 @@ await app.register(timelineRoutes);
 await app.register(assetRoutes);
 await app.register(libraryRoutes);
 await app.register(exportRoutes);
+await app.register(adminRoutes);
 
 const port = Number(process.env["PORT"] ?? 8000);
 await app.listen({ port, host: "0.0.0.0" });
