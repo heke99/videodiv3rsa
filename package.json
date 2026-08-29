@@ -17,7 +17,8 @@
     "lint": "turbo run lint",
     "db:migrate": "tsx infra/database/migrate.ts",
     "registry:sync": "tsx packages/skills/scripts/sync-registry.ts",
-    "test:quality": "vitest run tests/quality"
+    "test:quality": "vitest run tests/quality",
+    "dev:web": "pnpm --filter @videoai/web dev"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

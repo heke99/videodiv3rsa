@@ -14,12 +14,15 @@
     "dev": "tsx watch src/server.ts"
   },
   "dependencies": {
+    "@videoai/assets": "workspace:*",
     "@videoai/config": "workspace:*",
     "@videoai/contracts": "workspace:*",
     "@videoai/database": "workspace:*",
     "@videoai/gpu-manager": "workspace:*",
     "@videoai/orchestrator": "workspace:*",
+    "@videoai/render": "workspace:*",
     "@videoai/storage": "workspace:*",
+    "@videoai/timeline": "workspace:*",
     "fastify": "^5.2.0",
     "zod": "^3.24.1"
   }
