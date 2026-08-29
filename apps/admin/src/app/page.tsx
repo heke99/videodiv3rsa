@@ -12,17 +12,27 @@ export default function Overview() {
 
   useEffect(() => {
     if (!session) return;
-    adminApi.overview(session).then(setData).catch((e: Error) => setError(e.message));
+    adminApi
+      .overview(session)
+      .then(setData)
+      .catch((e: Error) => setError(e.message));
   }, [session]);
 
   if (!session) return <div className="page muted">Sign in as platform staff.</div>;
-  if (error) return <div className="page" style={{ color: "var(--danger)" }}>{error}</div>;
+  if (error)
+    return (
+      <div className="page" style={{ color: "var(--danger)" }}>
+        {error}
+      </div>
+    );
   if (!data) return <div className="page muted">Loading…</div>;
 
   return (
     <div className="page stack">
       <h1 style={{ margin: 0, fontSize: "1.4rem" }}>Overview</h1>
-      <p className="muted" style={{ margin: 0 }}>Last 7 days.</p>
+      <p className="muted" style={{ margin: 0 }}>
+        Last 7 days.
+      </p>
 
       <div className="grid">
         <Stat label="Jobs" value={String(data.jobs.total)} detail={`${data.jobs.completed} completed`} />
@@ -55,14 +65,28 @@ export default function Overview() {
   );
 }
 
-function Stat({ label, value, detail, warn }: { label: string; value: string; detail: string; warn?: boolean }) {
+function Stat({
+  label,
+  value,
+  detail,
+  warn,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  warn?: boolean;
+}) {
   return (
     <div className="card">
-      <div className="muted" style={{ fontSize: "0.85rem" }}>{label}</div>
+      <div className="muted" style={{ fontSize: "0.85rem" }}>
+        {label}
+      </div>
       <div style={{ fontSize: "1.6rem", fontWeight: 600, color: warn ? "var(--danger)" : undefined }}>
         {value}
       </div>
-      <div className="muted" style={{ fontSize: "0.8rem" }}>{detail}</div>
+      <div className="muted" style={{ fontSize: "0.8rem" }}>
+        {detail}
+      </div>
     </div>
   );
 }

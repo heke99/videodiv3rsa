@@ -35,13 +35,7 @@ export const ModelLifecycle = z.enum([
 export type ModelLifecycle = z.infer<typeof ModelLifecycle>;
 
 /** Only `approved` may be routed to. Everything else is fail-closed. */
-export const LicenseStatus = z.enum([
-  "unknown",
-  "pending_review",
-  "approved",
-  "blocked",
-  "expired_review",
-]);
+export const LicenseStatus = z.enum(["unknown", "pending_review", "approved", "blocked", "expired_review"]);
 export type LicenseStatus = z.infer<typeof LicenseStatus>;
 
 export const ModelLicense = z.object({
@@ -163,7 +157,9 @@ export const GenerateRequest = z.object({
   prompt: z.string().default(""),
   negative_prompt: z.string().default(""),
   references: z
-    .array(z.object({ role: z.string().min(1), asset: AssetRef, strength: z.number().min(0).max(1).default(1) }))
+    .array(
+      z.object({ role: z.string().min(1), asset: AssetRef, strength: z.number().min(0).max(1).default(1) }),
+    )
     .default([]),
   driving_audio: AssetRef.nullable().default(null),
   seed: z.number().int().nonnegative(),

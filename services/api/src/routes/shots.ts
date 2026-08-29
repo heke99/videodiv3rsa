@@ -134,15 +134,13 @@ export async function shotRoutes(app: FastifyInstance): Promise<void> {
     await transaction(async (client) => {
       // Two passes: shift out of the way first, because the index is unique
       // per project and a direct reassignment collides mid-update.
-      await client.query(
-        "update public.shots set index = index + 100000 where project_id = $1",
-        [id],
-      );
+      await client.query("update public.shots set index = index + 100000 where project_id = $1", [id]);
       for (const [position, shotId] of order.entries()) {
-        await client.query(
-          "update public.shots set index = $2 where id = $1 and project_id = $3",
-          [shotId, position, id],
-        );
+        await client.query("update public.shots set index = $2 where id = $1 and project_id = $3", [
+          shotId,
+          position,
+          id,
+        ]);
       }
     });
 

@@ -82,9 +82,7 @@ export async function authenticateToken(input: AuthInput): Promise<Caller> {
 
   if (!membership) {
     throw new AuthError(
-      input.organization_id
-        ? "You are not a member of that organisation"
-        : "You belong to no organisation",
+      input.organization_id ? "You are not a member of that organisation" : "You belong to no organisation",
       403,
     );
   }
@@ -105,11 +103,7 @@ export type OwnedTable = "projects" | "generation_jobs" | "assets" | "renders" |
  * Not found and not yours give the same answer on purpose: distinguishing them
  * tells a caller which ids exist.
  */
-export async function assertOwnedBy(
-  table: OwnedTable,
-  id: string,
-  caller: Caller,
-): Promise<void> {
+export async function assertOwnedBy(table: OwnedTable, id: string, caller: Caller): Promise<void> {
   const row = await queryOne<{ organization_id: string }>(
     `select organization_id from public.${table} where id = $1`,
     [id],

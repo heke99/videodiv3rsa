@@ -17,13 +17,25 @@ export const MAX_UPLOAD_BYTES: Record<string, number> = {
 
 const SIGNATURES: Array<{ mime: string; kind: string; test: (b: Uint8Array) => boolean }> = [
   { mime: "image/jpeg", kind: "image", test: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
-  { mime: "image/png", kind: "image", test: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 },
+  {
+    mime: "image/png",
+    kind: "image",
+    test: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47,
+  },
   { mime: "image/webp", kind: "image", test: (b) => ascii(b, 0, 4) === "RIFF" && ascii(b, 8, 4) === "WEBP" },
   // ISO base media: mp4, mov and m4a all carry "ftyp" at offset 4.
   { mime: "video/mp4", kind: "video", test: (b) => ascii(b, 4, 4) === "ftyp" },
-  { mime: "video/webm", kind: "video", test: (b) => b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3 },
+  {
+    mime: "video/webm",
+    kind: "video",
+    test: (b) => b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3,
+  },
   { mime: "audio/wav", kind: "audio", test: (b) => ascii(b, 0, 4) === "RIFF" && ascii(b, 8, 4) === "WAVE" },
-  { mime: "audio/mpeg", kind: "audio", test: (b) => (b[0] === 0xff && (b[1]! & 0xe0) === 0xe0) || ascii(b, 0, 3) === "ID3" },
+  {
+    mime: "audio/mpeg",
+    kind: "audio",
+    test: (b) => (b[0] === 0xff && (b[1]! & 0xe0) === 0xe0) || ascii(b, 0, 3) === "ID3",
+  },
   { mime: "audio/flac", kind: "audio", test: (b) => ascii(b, 0, 4) === "fLaC" },
 ];
 
@@ -60,9 +72,7 @@ export function detectType(bytes: Uint8Array): DetectedType {
 
   const match = SIGNATURES.find((s) => s.test(bytes));
   if (!match) {
-    throw new UploadRejected(
-      "Unsupported file type. Accepted: JPEG, PNG, WebP, MP4, WebM, WAV, MP3, FLAC.",
-    );
+    throw new UploadRejected("Unsupported file type. Accepted: JPEG, PNG, WebP, MP4, WebM, WAV, MP3, FLAC.");
   }
   return { mime: match.mime, kind: match.kind, extension: EXTENSIONS[match.mime]! };
 }
@@ -71,9 +81,7 @@ export function detectType(bytes: Uint8Array): DetectedType {
 export function detectAndVerify(bytes: Uint8Array, declaredMime: string): DetectedType {
   const detected = detectType(bytes);
   if (declaredMime && declaredMime !== detected.mime) {
-    throw new UploadRejected(
-      `File claims to be ${declaredMime} but its contents are ${detected.mime}.`,
-    );
+    throw new UploadRejected(`File claims to be ${declaredMime} but its contents are ${detected.mime}.`);
   }
   return detected;
 }

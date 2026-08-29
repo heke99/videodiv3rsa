@@ -47,7 +47,9 @@ describe("progress steps", () => {
   it("never shows an internal stage name to the user", () => {
     const internalWords = ["preflight", "shot_qc", "generating_shots", "audio_qc", "final_render", "syncing"];
     for (const status of Object.keys(JOB_STATUS_TO_STEP) as JobStatus[]) {
-      const labels = stepsFor(status).map((s) => s.label.toLowerCase()).join(" ");
+      const labels = stepsFor(status)
+        .map((s) => s.label.toLowerCase())
+        .join(" ");
       for (const word of internalWords) {
         expect(labels, `${status} leaked ${word}`).not.toContain(word);
       }
@@ -117,8 +119,15 @@ describe("the create screen's vocabulary", () => {
     // Spec 43 forbids exposing generation internals on the Create screen; the
     // user describes a video and the router decides the rest.
     const banned = [
-      "cfg scale", "classifier-free", "sampler", "checkpoint", "denois",
-      "diffusion step", "lora", "vae", "latent",
+      "cfg scale",
+      "classifier-free",
+      "sampler",
+      "checkpoint",
+      "denois",
+      "diffusion step",
+      "lora",
+      "vae",
+      "latent",
     ];
     const hits: string[] = [];
 

@@ -27,9 +27,11 @@ export async function migrate(dir: string): Promise<MigrationResult[]> {
 
   const files = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
   const applied = new Map<string, string>(
-    (await db().query<{ name: string; checksum: string }>(
-      "select name, checksum from public.schema_migrations",
-    )).rows.map((r) => [r.name, r.checksum]),
+    (
+      await db().query<{ name: string; checksum: string }>(
+        "select name, checksum from public.schema_migrations",
+      )
+    ).rows.map((r) => [r.name, r.checksum]),
   );
 
   const results: MigrationResult[] = [];
@@ -52,10 +54,10 @@ export async function migrate(dir: string): Promise<MigrationResult[]> {
 
     await transaction(async (client) => {
       await client.query(sql);
-      await client.query(
-        "insert into public.schema_migrations (name, checksum) values ($1, $2)",
-        [file, checksum],
-      );
+      await client.query("insert into public.schema_migrations (name, checksum) values ($1, $2)", [
+        file,
+        checksum,
+      ]);
     });
     results.push({ name: file, status: "applied" });
   }

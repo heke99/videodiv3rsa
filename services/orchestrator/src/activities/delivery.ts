@@ -16,12 +16,7 @@ import type {
 import { EXPORT_PRESETS, Timebase } from "@videoai/contracts";
 import { query, queryOne, transaction } from "@videoai/database";
 import { coverage, evaluate, measuredJudges, modelJudges, type Judge } from "@videoai/quality";
-import {
-  compose,
-  probe,
-  runTechnicalQc as measureFile,
-  toSrt,
-} from "@videoai/render";
+import { compose, probe, runTechnicalQc as measureFile, toSrt } from "@videoai/render";
 import { assembleTimeline, type AssembledDialogue } from "@videoai/timeline";
 
 import { materialise, readLocal, scratch } from "./media.js";
@@ -382,9 +377,15 @@ async function persistTimeline(ctx: JobContext, timeline: Timeline): Promise<str
               start_frame, end_frame, source_start_frame)
            values ($1, $2, $3, $4, 'video', $5, $6, $7, $8, $9)`,
           [
-            timelineId, trackId, ctx.organization_id, event.id, event.asset.asset_id,
+            timelineId,
+            trackId,
+            ctx.organization_id,
+            event.id,
+            event.asset.asset_id,
             event.shot_id === null ? null : (shotIds.get(event.shot_id) ?? null),
-            event.start_frame, event.end_frame, event.source_start_frame,
+            event.start_frame,
+            event.end_frame,
+            event.source_start_frame,
           ],
         );
       } else if (event.kind === "audio") {
@@ -395,10 +396,20 @@ async function persistTimeline(ctx: JobContext, timeline: Timeline): Promise<str
               fade_in_samples, fade_out_samples, pan, ducking_group)
            values ($1, $2, $3, $4, 'audio', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
           [
-            timelineId, trackId, ctx.organization_id, event.id, event.asset.asset_id,
+            timelineId,
+            trackId,
+            ctx.organization_id,
+            event.id,
+            event.asset.asset_id,
             event.shot_id === null ? null : (shotIds.get(event.shot_id) ?? null),
-            event.start_sample, event.end_sample, event.source_start_sample, event.gain_db,
-            event.fade_in_samples, event.fade_out_samples, event.pan, event.ducking_group,
+            event.start_sample,
+            event.end_sample,
+            event.source_start_sample,
+            event.gain_db,
+            event.fade_in_samples,
+            event.fade_out_samples,
+            event.pan,
+            event.ducking_group,
           ],
         );
       } else {
@@ -408,8 +419,13 @@ async function persistTimeline(ctx: JobContext, timeline: Timeline): Promise<str
               source_start_sample, text_content)
            values ($1, $2, $3, $4, 'caption', $5, $6, 0, $7)`,
           [
-            timelineId, trackId, ctx.organization_id, event.id,
-            event.start_sample, event.end_sample, event.text,
+            timelineId,
+            trackId,
+            ctx.organization_id,
+            event.id,
+            event.start_sample,
+            event.end_sample,
+            event.text,
           ],
         );
       }
@@ -628,9 +644,7 @@ async function loadTimeline(timelineId: string): Promise<{ timeline: Timeline; v
 }
 
 function presetOrThrow(aspect: string): { width: number; height: number } {
-  const preset = EXPORT_PRESETS[aspect as AspectRatio] as
-    | { width: number; height: number }
-    | undefined;
+  const preset = EXPORT_PRESETS[aspect as AspectRatio] as { width: number; height: number } | undefined;
   // The column is plain text, so an aspect ratio the contract does not know
   // reaches here as a string. Refusing is right: guessing a resolution would
   // deliver a file in a shape nobody asked for.

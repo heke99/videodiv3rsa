@@ -26,12 +26,7 @@ export const JobStatus = z.enum([
 ]);
 export type JobStatus = z.infer<typeof JobStatus>;
 
-export const TERMINAL_JOB_STATUSES: JobStatus[] = [
-  "completed",
-  "failed",
-  "cancelled",
-  "needs_review",
-];
+export const TERMINAL_JOB_STATUSES: JobStatus[] = ["completed", "failed", "cancelled", "needs_review"];
 
 /**
  * Human-readable production steps shown in the UI (spec section 46).

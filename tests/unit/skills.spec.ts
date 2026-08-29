@@ -234,10 +234,9 @@ describe("skill routing", () => {
 
   it("pulls in identity skills only when the shot locks identity", () => {
     const without = selectSkills({ quality_mode: "STANDARD" }, catalogue).map((s) => s.skill_id);
-    const with_ = selectSkills(
-      { quality_mode: "STANDARD", requires_identity_lock: true },
-      catalogue,
-    ).map((s) => s.skill_id);
+    const with_ = selectSkills({ quality_mode: "STANDARD", requires_identity_lock: true }, catalogue).map(
+      (s) => s.skill_id,
+    );
 
     expect(without).not.toContain("character-identity-lock");
     expect(with_).toContain("character-identity-lock");
@@ -349,7 +348,7 @@ describe("skill execution contract", () => {
 describe("eval and promotion", () => {
   it("parses cases out of fenced json blocks", () => {
     const cases = parseEvalCases(
-      "Prose explaining the skill.\n\n```json\n[{\"id\": \"a\", \"input\": {}, \"expect\": {}}]\n```\n",
+      'Prose explaining the skill.\n\n```json\n[{"id": "a", "input": {}, "expect": {}}]\n```\n',
     );
     expect(cases).toHaveLength(1);
     expect(cases[0]!.id).toBe("a");
@@ -360,8 +359,15 @@ describe("eval and promotion", () => {
   });
 
   const report = (over: Partial<EvalReport> = {}): EvalReport => ({
-    skill_id: "s", version: "1.1", suite: "default", outcomes: [],
-    score: 0.9, latency_ms: 1000, retries: 0.1, gpu_seconds: 10, ...over,
+    skill_id: "s",
+    version: "1.1",
+    suite: "default",
+    outcomes: [],
+    score: 0.9,
+    latency_ms: 1000,
+    retries: 0.1,
+    gpu_seconds: 10,
+    ...over,
   });
 
   it("promotes a first version that clears the bar", () => {
@@ -400,9 +406,7 @@ describe("the shipped catalogue", () => {
 
   it("has no duplicate skill ids", async () => {
     const directories = await discoverSkillPackages(CATALOGUE_ROOT);
-    const ids = await Promise.all(
-      directories.map(async (d) => (await loadSkillPackage(d)).skill_id),
-    );
+    const ids = await Promise.all(directories.map(async (d) => (await loadSkillPackage(d)).skill_id));
     expect(new Set(ids).size).toBe(ids.length);
   });
 

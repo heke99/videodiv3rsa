@@ -33,13 +33,7 @@ const SKIP_DIRS = new Set(["node_modules", ".git", ".next", "dist", ".turbo", "c
 const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".mjs", ".py"];
 
 /** Paths where naming a literal is the point rather than a leak. */
-const ALLOWED = [
-  "docs/",
-  ".env.example",
-  "README.md",
-  "vendor/",
-  "infra/database/migrations/",
-];
+const ALLOWED = ["docs/", ".env.example", "README.md", "vendor/", "infra/database/migrations/"];
 
 async function walk(dir: string, out: string[] = []): Promise<string[]> {
   for (const entry of await readdir(dir, { withFileTypes: true })) {

@@ -108,7 +108,12 @@ export class LocalStorageAdapter implements StorageAdapter {
   async head(key: string): Promise<ObjectMetadata | null> {
     try {
       const info = await stat(this.resolve(key));
-      return { key, size_bytes: info.size, mime: "application/octet-stream", updated_at: info.mtime.toISOString() };
+      return {
+        key,
+        size_bytes: info.size,
+        mime: "application/octet-stream",
+        updated_at: info.mtime.toISOString(),
+      };
     } catch {
       return null;
     }

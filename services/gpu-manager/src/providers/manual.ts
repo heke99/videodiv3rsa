@@ -33,17 +33,14 @@ export class ManualGpuProvider implements GpuProvider {
   }
 
   async getWorker(workerId: string): Promise<ProviderWorker | null> {
-    const row = await queryOne<GpuWorkerRow>(
-      "select * from public.gpu_workers where worker_id = $1",
-      [workerId],
-    );
+    const row = await queryOne<GpuWorkerRow>("select * from public.gpu_workers where worker_id = $1", [
+      workerId,
+    ]);
     return row ? toProviderWorker(row) : null;
   }
 
   async listWorkers(): Promise<ProviderWorker[]> {
-    const rows = await query<GpuWorkerRow>(
-      "select * from public.gpu_workers where provider = 'manual'",
-    );
+    const rows = await query<GpuWorkerRow>("select * from public.gpu_workers where provider = 'manual'");
     return rows.map(toProviderWorker);
   }
 

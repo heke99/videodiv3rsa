@@ -8,13 +8,13 @@ test fails the build if a domain literal appears anywhere in application code.
 
 Everything reads from configuration, and none of it has a default:
 
-| Variable | What depends on it |
-|---|---|
-| `PUBLIC_APP_URL` | absolute links in the app, email links, share URLs |
-| `APP_DOMAIN` | display, cookie scope |
-| `APP_NAME` | UI branding |
-| `AUTH_CALLBACK_URL` | the OAuth redirect target |
-| `STORAGE_PUBLIC_BASE` | how signed media URLs are addressed |
+| Variable              | What depends on it                                 |
+| --------------------- | -------------------------------------------------- |
+| `PUBLIC_APP_URL`      | absolute links in the app, email links, share URLs |
+| `APP_DOMAIN`          | display, cookie scope                              |
+| `APP_NAME`            | UI branding                                        |
+| `AUTH_CALLBACK_URL`   | the OAuth redirect target                          |
+| `STORAGE_PUBLIC_BASE` | how signed media URLs are addressed                |
 
 A missing value is a startup failure rather than a silent fallback, which is
 what stops a half-migrated deployment from running and quietly serving the old

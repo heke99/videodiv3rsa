@@ -10,7 +10,10 @@ import type { Session } from "@videoai/ui";
 export type RequestOptions = Session;
 
 export class ApiError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -22,7 +25,10 @@ function baseUrl(): string {
   return url.replace(/\/$/, "");
 }
 
-async function request<T>(path: string, options: RequestOptions & { method?: string; body?: unknown }): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestOptions & { method?: string; body?: unknown },
+): Promise<T> {
   const response = await fetch(`${baseUrl()}${path}`, {
     method: options.method ?? "GET",
     headers: {
@@ -86,7 +92,9 @@ export const adminApi = {
 
   drain: (workerId: string, drain: boolean, o: RequestOptions) =>
     request<{ draining: boolean }>(`/api/admin/workers/${workerId}/drain`, {
-      ...o, method: "POST", body: { drain },
+      ...o,
+      method: "POST",
+      body: { drain },
     }),
 
   models: (o: RequestOptions) => request<{ models: ModelRow[] }>("/api/admin/models", o),
@@ -103,8 +111,7 @@ export const adminApi = {
     o: RequestOptions,
   ) => request<unknown>(`/api/admin/models/${modelId}/lifecycle`, { ...o, method: "POST", body }),
 
-  skills: (o: RequestOptions) =>
-    request<{ skills: Array<Record<string, unknown>> }>("/api/admin/skills", o),
+  skills: (o: RequestOptions) => request<{ skills: Array<Record<string, unknown>> }>("/api/admin/skills", o),
 
   quality: (o: RequestOptions) =>
     request<{

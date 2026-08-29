@@ -61,9 +61,7 @@ export class LocalReasoningBackend implements DirectorBackend {
       });
 
       if (!response.ok) {
-        throw new Error(
-          `Local reasoning model returned ${response.status}: ${await response.text()}`,
-        );
+        throw new Error(`Local reasoning model returned ${response.status}: ${await response.text()}`);
       }
 
       const body = (await response.json()) as {

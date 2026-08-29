@@ -21,8 +21,18 @@ const capabilities: CapabilitySnapshot = {
   schema_version: "1.0",
   generated_at: new Date().toISOString(),
   models: [
-    { model_id: "wan2.2-t2v-a14b", version: "2.2.0", generation_kinds: ["text_to_video"], max_duration_frames: 121 },
-    { model_id: "wan2.2-i2v-a14b", version: "2.2.0", generation_kinds: ["image_to_video"], max_duration_frames: 121 },
+    {
+      model_id: "wan2.2-t2v-a14b",
+      version: "2.2.0",
+      generation_kinds: ["text_to_video"],
+      max_duration_frames: 121,
+    },
+    {
+      model_id: "wan2.2-i2v-a14b",
+      version: "2.2.0",
+      generation_kinds: ["image_to_video"],
+      max_duration_frames: 121,
+    },
   ],
   skills: [{ skill_id: "wan-t2v-prompt", version: "1.0" }],
   available_profiles: ["GPU_PROFILE_ULTRA"],
@@ -33,9 +43,7 @@ const capabilities: CapabilitySnapshot = {
 const timebase = { num: 24, den: 1 };
 
 /** A backend that replays canned responses, so planning is deterministic. */
-function fixtureBackend(
-  responses: string[],
-): DirectorBackend & { calls: string[]; systems: string[] } {
+function fixtureBackend(responses: string[]): DirectorBackend & { calls: string[]; systems: string[] } {
   const calls: string[] = [];
   const systems: string[] = [];
   let index = 0;
@@ -66,15 +74,26 @@ const validBrief = JSON.stringify({
 
 function shot(id: string, index: number, frames: number): Shot {
   return {
-    id, scene_id: "scene_01", index,
-    description: "d", action: "a", shot_type: "medium",
+    id,
+    scene_id: "scene_01",
+    index,
+    description: "d",
+    action: "a",
+    shot_type: "medium",
     duration_frames: frames,
     camera: { framing: "medium", lens: "", movement: "static", height: "eye_level", focus_behavior: "" },
-    character_ids: [], product_ids: [], location_id: null, dialogue_line_ids: [],
-    motion_complexity: 0.5, continuity_requirement: 0.5,
-    requires_identity_lock: false, requires_product_fidelity: false,
+    character_ids: [],
+    product_ids: [],
+    location_id: null,
+    dialogue_line_ids: [],
+    motion_complexity: 0.5,
+    continuity_requirement: 0.5,
+    requires_identity_lock: false,
+    requires_product_fidelity: false,
     preferred_generation_kind: "text_to_video",
-    start_frame_asset: null, end_frame_asset: null, notes: "",
+    start_frame_asset: null,
+    end_frame_asset: null,
+    notes: "",
   };
 }
 
@@ -242,14 +261,26 @@ describe("skills reaching the Director", () => {
   };
 
   const shot: Shot = {
-    id: "shot_01", scene_id: "scene_01", index: 0,
-    description: "d", action: "a", shot_type: "medium", duration_frames: 48,
+    id: "shot_01",
+    scene_id: "scene_01",
+    index: 0,
+    description: "d",
+    action: "a",
+    shot_type: "medium",
+    duration_frames: 48,
     camera: { framing: "medium", lens: "", movement: "static", height: "eye_level", focus_behavior: "" },
-    character_ids: ["c1"], product_ids: [], location_id: null, dialogue_line_ids: ["line_1"],
-    motion_complexity: 0.5, continuity_requirement: 0.5,
-    requires_identity_lock: true, requires_product_fidelity: false,
+    character_ids: ["c1"],
+    product_ids: [],
+    location_id: null,
+    dialogue_line_ids: ["line_1"],
+    motion_complexity: 0.5,
+    continuity_requirement: 0.5,
+    requires_identity_lock: true,
+    requires_product_fidelity: false,
     preferred_generation_kind: "text_to_video",
-    start_frame_asset: null, end_frame_asset: null, notes: "",
+    start_frame_asset: null,
+    end_frame_asset: null,
+    notes: "",
   };
 
   const validRepair = JSON.stringify({
@@ -313,7 +344,10 @@ describe("skills reaching the Director", () => {
     // regression it exists to catch.
     expect(withEvals.length).toBeGreaterThan(0);
     for (const skill of withEvals) {
-      for (const line of skill.eval!.split("\n").map((l) => l.trim()).filter((l) => l.length > 20)) {
+      for (const line of skill
+        .eval!.split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.length > 20)) {
         expect(system).not.toContain(line);
       }
     }

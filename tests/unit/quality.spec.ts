@@ -28,8 +28,16 @@ function judge(id: string, dimension: Judge["dimension"], available = true): Jud
 
 function judgeResult(over: Partial<JudgeResult> = {}): JudgeResult {
   return {
-    judge_id: "j", judge_version: "1.0", status: "pass", score: 1, confidence: 1,
-    findings: [], recommended_actions: [], metrics: {}, repair_scope: "none", ...over,
+    judge_id: "j",
+    judge_version: "1.0",
+    status: "pass",
+    score: 1,
+    confidence: 1,
+    findings: [],
+    recommended_actions: [],
+    metrics: {},
+    repair_scope: "none",
+    ...over,
   };
 }
 
@@ -84,7 +92,10 @@ describe("ensemble aggregation", () => {
 
   it("passes when everything measured clears its threshold", () => {
     const result = aggregate(
-      [judgeResult({ judge_id: "flicker-judge", score: 0.9 }), judgeResult({ judge_id: "motion-judge", score: 0.8 })],
+      [
+        judgeResult({ judge_id: "flicker-judge", score: 0.9 }),
+        judgeResult({ judge_id: "motion-judge", score: 0.8 }),
+      ],
       judges,
       QUALITY_PROFILES.STANDARD,
       options,
@@ -96,7 +107,10 @@ describe("ensemble aggregation", () => {
     // The failure this prevents: a fatal defect averaged away by dimensions
     // that happened to be fine.
     const result = aggregate(
-      [judgeResult({ judge_id: "flicker-judge", score: 0.1 }), judgeResult({ judge_id: "motion-judge", score: 1 })],
+      [
+        judgeResult({ judge_id: "flicker-judge", score: 0.1 }),
+        judgeResult({ judge_id: "motion-judge", score: 1 }),
+      ],
       judges,
       QUALITY_PROFILES.STANDARD,
       options,
@@ -106,10 +120,13 @@ describe("ensemble aggregation", () => {
 
   it("fails on a severe finding regardless of score", () => {
     const result = aggregate(
-      [judgeResult({
-        judge_id: "flicker-judge", score: 0.95,
-        findings: [{ code: "flicker", severity: "critical", message: "m", frames: [], entity_ref: null }],
-      })],
+      [
+        judgeResult({
+          judge_id: "flicker-judge",
+          score: 0.95,
+          findings: [{ code: "flicker", severity: "critical", message: "m", frames: [], entity_ref: null }],
+        }),
+      ],
       judges,
       QUALITY_PROFILES.STANDARD,
       options,
@@ -121,8 +138,13 @@ describe("ensemble aggregation", () => {
     const result = aggregate(
       [
         judgeResult({ judge_id: "flicker-judge", score: 0.8 }),
-        judgeResult({ judge_id: "identity-judge", score: 0, confidence: 0, status: "skipped",
-                      recommended_actions: ["Requires a vision model."] }),
+        judgeResult({
+          judge_id: "identity-judge",
+          score: 0,
+          confidence: 0,
+          status: "skipped",
+          recommended_actions: ["Requires a vision model."],
+        }),
       ],
       judges,
       QUALITY_PROFILES.STANDARD,
@@ -174,37 +196,58 @@ describe("quality profiles", () => {
 });
 
 describe("failure classification", () => {
-  const evaluation = (findings: Array<{ code: string; severity: string; frames?: number[] }>): QualityEvaluation => ({
-    schema_version: "1.0", subject_kind: "shot", subject_id: "shot_01",
-    quality_profile: "STANDARD", overall: 0.4, scores: {}, passed: false,
-    judges: [judgeResult({
-      findings: findings.map((f) => ({
-        code: f.code, severity: f.severity as never, message: "", frames: f.frames ?? [], entity_ref: null,
-      })),
-    })],
+  const evaluation = (
+    findings: Array<{ code: string; severity: string; frames?: number[] }>,
+  ): QualityEvaluation => ({
+    schema_version: "1.0",
+    subject_kind: "shot",
+    subject_id: "shot_01",
+    quality_profile: "STANDARD",
+    overall: 0.4,
+    scores: {},
+    passed: false,
+    judges: [
+      judgeResult({
+        findings: findings.map((f) => ({
+          code: f.code,
+          severity: f.severity as never,
+          message: "",
+          frames: f.frames ?? [],
+          entity_ref: null,
+        })),
+      }),
+    ],
   });
 
   it("calls a caption problem a composition fault", () => {
-    expect(classify(evaluation([{ code: "caption_mismatch", severity: "high" }])).failure_class)
-      .toBe("composition_fault");
+    expect(classify(evaluation([{ code: "caption_mismatch", severity: "high" }])).failure_class).toBe(
+      "composition_fault",
+    );
   });
 
   it("calls a static shot a motion fault", () => {
-    expect(classify(evaluation([{ code: "insufficient_motion", severity: "high" }])).failure_class)
-      .toBe("motion_fault");
+    expect(classify(evaluation([{ code: "insufficient_motion", severity: "high" }])).failure_class).toBe(
+      "motion_fault",
+    );
   });
 
   it("calls a bounded defect a local artifact", () => {
-    expect(classify(evaluation([{ code: "content_discontinuity", severity: "high", frames: [60, 61] }])).failure_class)
-      .toBe("local_artifact");
+    expect(
+      classify(evaluation([{ code: "content_discontinuity", severity: "high", frames: [60, 61] }]))
+        .failure_class,
+    ).toBe("local_artifact");
   });
 
   it("only calls whole-shot failure on several unrelated severe findings", () => {
-    expect(classify(evaluation([
-      { code: "anatomy", severity: "critical" },
-      { code: "physics", severity: "high" },
-      { code: "background_instability", severity: "high" },
-    ])).failure_class).toBe("whole_shot_failure");
+    expect(
+      classify(
+        evaluation([
+          { code: "anatomy", severity: "critical" },
+          { code: "physics", severity: "high" },
+          { code: "background_instability", severity: "high" },
+        ]),
+      ).failure_class,
+    ).toBe("whole_shot_failure");
   });
 
   it("treats a changed canonical entity as invalidation, not a bad generation", () => {
@@ -219,23 +262,41 @@ describe("failure classification", () => {
 });
 
 describe("repair planning", () => {
-  const budget = { max_generation_attempts: 3, max_repair_attempts: 2, max_gpu_seconds: 600, max_cost_units: 100 };
+  const budget = {
+    max_generation_attempts: 3,
+    max_repair_attempts: 2,
+    max_gpu_seconds: 600,
+    max_cost_units: 100,
+  };
   const spend = { generation_attempts: 1, repair_attempts: 0, gpu_seconds: 60, cost_units: 10 };
 
   const evaluation = (codes: Array<[string, string]>): QualityEvaluation => ({
-    schema_version: "1.0", subject_kind: "shot", subject_id: "shot_01",
-    quality_profile: "STANDARD", overall: 0.4, scores: {}, passed: false,
-    judges: [judgeResult({
-      findings: codes.map(([code, severity]) => ({
-        code, severity: severity as never, message: code, frames: [], entity_ref: null,
-      })),
-    })],
+    schema_version: "1.0",
+    subject_kind: "shot",
+    subject_id: "shot_01",
+    quality_profile: "STANDARD",
+    overall: 0.4,
+    scores: {},
+    passed: false,
+    judges: [
+      judgeResult({
+        findings: codes.map(([code, severity]) => ({
+          code,
+          severity: severity as never,
+          message: code,
+          frames: [],
+          entity_ref: null,
+        })),
+      }),
+    ],
   });
 
   it("repairs captions only, when captions are the only problem", () => {
     const decision = planRepair({
       evaluation: evaluation([["caption_mismatch", "high"]]),
-      subject_id: "shot_01", budget, spend,
+      subject_id: "shot_01",
+      budget,
+      spend,
     });
     expect(decision.plan.scope).toBe("caption");
     expect(decision.plan.estimated_gpu_seconds).toBe(0);
@@ -244,7 +305,9 @@ describe("repair planning", () => {
   it("remixes audio rather than regenerating for a level problem", () => {
     const decision = planRepair({
       evaluation: evaluation([["loudness_off_target", "high"]]),
-      subject_id: "shot_01", budget, spend,
+      subject_id: "shot_01",
+      budget,
+      spend,
     });
     expect(decision.plan.scope).toBe("audio");
     expect(decision.plan.actions[0]!.action).toBe("audio_repair");
@@ -253,7 +316,9 @@ describe("repair planning", () => {
   it("recomposes for a sync fault instead of regenerating", () => {
     const decision = planRepair({
       evaluation: evaluation([["av_sync", "high"]]),
-      subject_id: "shot_01", budget, spend,
+      subject_id: "shot_01",
+      budget,
+      spend,
     });
     expect(decision.plan.scope).toBe("timing");
   });
@@ -261,23 +326,37 @@ describe("repair planning", () => {
   it("invalidates dependents when a canonical entity changed", () => {
     const decision = planRepair({
       evaluation: evaluation([["identity_drift", "high"]]),
-      subject_id: "shot_01", budget, spend, entity_changed: true,
+      subject_id: "shot_01",
+      budget,
+      spend,
+      entity_changed: true,
     });
     expect(decision.plan.scope).toBe("dependent_shots");
   });
 
   it("never selects project scope", () => {
     const decision = planRepair({
-      evaluation: evaluation([["anatomy", "critical"], ["physics", "high"], ["background_instability", "high"]]),
-      subject_id: "shot_01", budget, spend,
+      evaluation: evaluation([
+        ["anatomy", "critical"],
+        ["physics", "high"],
+        ["background_instability", "high"],
+      ]),
+      subject_id: "shot_01",
+      budget,
+      spend,
     });
     expect(decision.plan.scope).not.toBe("project");
   });
 
   it("hands to review rather than starting a repair it cannot finish", () => {
     const decision = planRepair({
-      evaluation: evaluation([["anatomy", "critical"], ["physics", "high"], ["background_instability", "high"]]),
-      subject_id: "shot_01", budget,
+      evaluation: evaluation([
+        ["anatomy", "critical"],
+        ["physics", "high"],
+        ["background_instability", "high"],
+      ]),
+      subject_id: "shot_01",
+      budget,
       spend: { ...spend, gpu_seconds: 595 },
     });
     expect(decision.needs_review).toBe(true);
@@ -287,7 +366,8 @@ describe("repair planning", () => {
   it("hands to review when the repair budget is spent", () => {
     const decision = planRepair({
       evaluation: evaluation([["insufficient_motion", "high"]]),
-      subject_id: "shot_01", budget,
+      subject_id: "shot_01",
+      budget,
       spend: { ...spend, repair_attempts: 2 },
     });
     expect(decision.needs_review).toBe(true);
@@ -296,7 +376,9 @@ describe("repair planning", () => {
   it("corrects the prompt when no specific repair maps to the findings", () => {
     const decision = planRepair({
       evaluation: evaluation([["something_unmapped", "high"]]),
-      subject_id: "shot_01", budget, spend,
+      subject_id: "shot_01",
+      budget,
+      spend,
     });
     expect(decision.plan.actions[0]!.action).toBe("prompt_repair");
   });
@@ -304,7 +386,9 @@ describe("repair planning", () => {
   it("plans nothing when nothing failed", () => {
     const decision = planRepair({
       evaluation: evaluation([["flicker", "low"]]),
-      subject_id: "shot_01", budget, spend,
+      subject_id: "shot_01",
+      budget,
+      spend,
     });
     expect(decision.plan.scope).toBe("none");
     expect(decision.needs_review).toBe(false);
@@ -314,7 +398,9 @@ describe("repair planning", () => {
 describe("calibration", () => {
   function samples(pairs: Array<[number, number]>, labels: string[][] = []): CalibrationSample[] {
     return pairs.map(([judgeScore, humanScore], i) => ({
-      asset_id: `a${i}`, judge_score: judgeScore, human_score: humanScore,
+      asset_id: `a${i}`,
+      judge_score: judgeScore,
+      human_score: humanScore,
       failure_labels: labels[i] ?? [],
     }));
   }
@@ -329,12 +415,27 @@ describe("calibration", () => {
   });
 
   it("counts a judge failing what people accepted as a false positive", () => {
-    const rates = errorRates(samples([[0.5, 0.9], [0.5, 0.9], [0.9, 0.9]]), 0.7, 0.7);
+    const rates = errorRates(
+      samples([
+        [0.5, 0.9],
+        [0.5, 0.9],
+        [0.9, 0.9],
+      ]),
+      0.7,
+      0.7,
+    );
     expect(rates.false_positive_rate).toBe(1);
   });
 
   it("counts a judge passing what people rejected as a false negative", () => {
-    const rates = errorRates(samples([[0.9, 0.2], [0.9, 0.9]]), 0.7, 0.7);
+    const rates = errorRates(
+      samples([
+        [0.9, 0.2],
+        [0.9, 0.9],
+      ]),
+      0.7,
+      0.7,
+    );
     expect(rates.false_negative_rate).toBe(0.5);
   });
 
@@ -344,25 +445,30 @@ describe("calibration", () => {
   });
 
   it("trusts a judge that does, given enough samples", () => {
-    const correlated = samples(Array.from({ length: 30 }, (_, i) => {
-      const v = i / 29;
-      return [v, v];
-    }));
+    const correlated = samples(
+      Array.from({ length: 30 }, (_, i) => {
+        const v = i / 29;
+        return [v, v];
+      }),
+    );
     const report = calibrate("flicker", correlated, 0.7);
     expect(report.correlation).toBeGreaterThan(0.9);
     expect(report.usable).toBe(true);
   });
 
   it("says so when there are too few samples to recommend anything", () => {
-    expect(calibrate("flicker", samples([[0.9, 0.9]]), 0.7).notes.join(" "))
-      .toContain("rated samples");
+    expect(calibrate("flicker", samples([[0.9, 0.9]]), 0.7).notes.join(" ")).toContain("rated samples");
   });
 
   it("recommends a threshold that weights missed defects over needless repairs", () => {
     // Judge scores cluster: bad shots near 0.5, good shots near 0.9.
     const data = samples([
-      [0.5, 0.2], [0.52, 0.3], [0.55, 0.25],
-      [0.9, 0.9], [0.92, 0.95], [0.88, 0.85],
+      [0.5, 0.2],
+      [0.52, 0.3],
+      [0.55, 0.25],
+      [0.9, 0.9],
+      [0.92, 0.95],
+      [0.88, 0.85],
     ]);
     const threshold = recommendThreshold(data);
     expect(threshold).toBeGreaterThan(0.55);
@@ -372,7 +478,12 @@ describe("calibration", () => {
   it("finds a defect class the judge is blind to", () => {
     // The judge passes everything, but people rejected the hand failures.
     const data = samples(
-      [[0.9, 0.2], [0.9, 0.2], [0.9, 0.3], [0.9, 0.9]],
+      [
+        [0.9, 0.2],
+        [0.9, 0.2],
+        [0.9, 0.3],
+        [0.9, 0.9],
+      ],
       [["hands"], ["hands"], ["hands"], []],
     );
     expect(blindSpots(data, 0.7)).toContain("hands");

@@ -39,11 +39,7 @@ export interface StepView {
   detail: string;
 }
 
-export function stepsFor(
-  status: JobStatus,
-  completedUnits = 0,
-  totalUnits = 0,
-): StepView[] {
+export function stepsFor(status: JobStatus, completedUnits = 0, totalUnits = 0): StepView[] {
   const current = JOB_STATUS_TO_STEP[status];
   const finished = status === "completed";
   const currentIndex = current ? STEP_ORDER.indexOf(current) : finished ? STEP_ORDER.length : -1;

@@ -9,7 +9,11 @@ import type { BudgetSpend, RetryBudget } from "@videoai/contracts";
  */
 
 export class BudgetExhaustedError extends Error {
-  constructor(readonly dimension: keyof BudgetSpend, readonly limit: number, readonly spent: number) {
+  constructor(
+    readonly dimension: keyof BudgetSpend,
+    readonly limit: number,
+    readonly spent: number,
+  ) {
     super(
       `Retry budget exhausted on ${dimension}: spent ${spent} against a limit of ${limit}. ` +
         `Handing this to review rather than retrying again.`,
@@ -54,13 +58,33 @@ export function spend(current: BudgetSpend, delta: Partial<BudgetSpend>): Budget
  */
 export const DEFAULT_BUDGETS: Record<string, RetryBudget> = {
   PREVIEW: { max_generation_attempts: 1, max_repair_attempts: 0, max_gpu_seconds: 300, max_cost_units: 50 },
-  STANDARD: { max_generation_attempts: 3, max_repair_attempts: 2, max_gpu_seconds: 3600, max_cost_units: 500 },
-  REALISTIC: { max_generation_attempts: 4, max_repair_attempts: 3, max_gpu_seconds: 5400, max_cost_units: 800 },
+  STANDARD: {
+    max_generation_attempts: 3,
+    max_repair_attempts: 2,
+    max_gpu_seconds: 3600,
+    max_cost_units: 500,
+  },
+  REALISTIC: {
+    max_generation_attempts: 4,
+    max_repair_attempts: 3,
+    max_gpu_seconds: 5400,
+    max_cost_units: 800,
+  },
   UGC: { max_generation_attempts: 3, max_repair_attempts: 2, max_gpu_seconds: 3600, max_cost_units: 500 },
-  CINEMATIC: { max_generation_attempts: 4, max_repair_attempts: 3, max_gpu_seconds: 7200, max_cost_units: 1000 },
+  CINEMATIC: {
+    max_generation_attempts: 4,
+    max_repair_attempts: 3,
+    max_gpu_seconds: 7200,
+    max_cost_units: 1000,
+  },
   PRODUCT: { max_generation_attempts: 4, max_repair_attempts: 3, max_gpu_seconds: 5400, max_cost_units: 800 },
   AVATAR: { max_generation_attempts: 3, max_repair_attempts: 3, max_gpu_seconds: 3600, max_cost_units: 600 },
-  ULTRA: { max_generation_attempts: 6, max_repair_attempts: 4, max_gpu_seconds: 14_400, max_cost_units: 2000 },
+  ULTRA: {
+    max_generation_attempts: 6,
+    max_repair_attempts: 4,
+    max_gpu_seconds: 14_400,
+    max_cost_units: 2000,
+  },
 };
 
 export function budgetFor(qualityMode: string): RetryBudget {

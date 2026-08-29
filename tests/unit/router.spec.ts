@@ -148,7 +148,10 @@ describe("model router", () => {
     };
     const decision = route(request({ requires_identity_lock: true }), {
       rules: [defaultRule, identityRule],
-      models: [model(), model({ model_id: "wan2.2-i2v-a14b", generation_kinds: ["text_to_video", "image_to_video"] })],
+      models: [
+        model(),
+        model({ model_id: "wan2.2-i2v-a14b", generation_kinds: ["text_to_video", "image_to_video"] }),
+      ],
     });
     expect(decision.model_id).toBe("wan2.2-i2v-a14b");
     expect(decision.qc_profile).toBe("REALISTIC");

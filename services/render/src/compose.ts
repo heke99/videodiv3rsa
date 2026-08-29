@@ -97,9 +97,10 @@ export async function compose(input: ComposeInput): Promise<void> {
     videoOut = "vout";
   }
 
-  const target = LOUDNESS_TARGETS[
-    input.timeline.loudness_profile === "custom" ? "social" : input.timeline.loudness_profile
-  ];
+  const target =
+    LOUDNESS_TARGETS[
+      input.timeline.loudness_profile === "custom" ? "social" : input.timeline.loudness_profile
+    ];
 
   if (audioLabels.length > 0) {
     filters.push(
@@ -115,17 +116,25 @@ export async function compose(input: ComposeInput): Promise<void> {
 
   const args = [
     ...inputs,
-    "-filter_complex", filters.join(";"),
-    "-map", `[${videoOut}]`,
+    "-filter_complex",
+    filters.join(";"),
+    "-map",
+    `[${videoOut}]`,
     ...(audioLabels.length > 0 ? ["-map", "[aout]"] : []),
-    "-r", `${fps.num}/${fps.den}`,
-    "-c:v", "libx264",
-    "-preset", "slow",
-    "-crf", "18",
-    "-pix_fmt", "yuv420p",
+    "-r",
+    `${fps.num}/${fps.den}`,
+    "-c:v",
+    "libx264",
+    "-preset",
+    "slow",
+    "-crf",
+    "18",
+    "-pix_fmt",
+    "yuv420p",
     // faststart moves the index to the front so the file plays before it has
     // fully downloaded, which matters for every social target.
-    "-movflags", "+faststart",
+    "-movflags",
+    "+faststart",
     ...(audioLabels.length > 0 ? ["-c:a", "aac", "-b:a", "192k", "-ar", String(sampleRate)] : []),
     input.outputPath,
   ];

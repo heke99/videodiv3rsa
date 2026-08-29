@@ -59,9 +59,7 @@ describe("content type detection", () => {
   });
 
   it("rejects content that disagrees with its declared type", () => {
-    expect(() => detectAndVerify(bytes(0xff, 0xd8, 0xff), "video/mp4")).toThrow(
-      /claims to be/,
-    );
+    expect(() => detectAndVerify(bytes(0xff, 0xd8, 0xff), "video/mp4")).toThrow(/claims to be/);
   });
 
   it("accepts content that matches its declared type", () => {

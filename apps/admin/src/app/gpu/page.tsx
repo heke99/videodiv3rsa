@@ -12,13 +12,21 @@ export default function GpuPage() {
 
   const load = useCallback(() => {
     if (!session) return;
-    adminApi.workers(session).then((r) => setWorkers(r.workers)).catch((e: Error) => setError(e.message));
+    adminApi
+      .workers(session)
+      .then((r) => setWorkers(r.workers))
+      .catch((e: Error) => setError(e.message));
   }, [session]);
 
   useEffect(load, [load]);
 
   if (!session) return <div className="page muted">Sign in as platform staff.</div>;
-  if (error) return <div className="page" style={{ color: "var(--danger)" }}>{error}</div>;
+  if (error)
+    return (
+      <div className="page" style={{ color: "var(--danger)" }}>
+        {error}
+      </div>
+    );
 
   return (
     <div className="page stack">
@@ -26,8 +34,8 @@ export default function GpuPage() {
 
       {workers?.length === 0 && (
         <div className="card muted">
-          No workers registered. Generation will fail preflight until one is attached; there is no
-          remote fallback by design.
+          No workers registered. Generation will fail preflight until one is attached; there is no remote
+          fallback by design.
         </div>
       )}
 
@@ -36,8 +44,7 @@ export default function GpuPage() {
           const total = Number(worker.vram_total_bytes);
           const free = Number(worker.vram_free_bytes);
           const usedPct = total === 0 ? 0 : Math.round(((total - free) / total) * 100);
-          const stale =
-            !worker.last_seen_at || Date.now() - Date.parse(worker.last_seen_at) > 120_000;
+          const stale = !worker.last_seen_at || Date.now() - Date.parse(worker.last_seen_at) > 120_000;
 
           return (
             <div key={worker.worker_id} className="card stack" style={{ gap: "0.6rem" }}>
@@ -57,7 +64,9 @@ export default function GpuPage() {
               </div>
 
               <div className="row" style={{ gap: "1.25rem", flexWrap: "wrap" }}>
-                <span className="muted">VRAM {usedPct}% used of {(total / 1024 ** 3).toFixed(0)} GiB</span>
+                <span className="muted">
+                  VRAM {usedPct}% used of {(total / 1024 ** 3).toFixed(0)} GiB
+                </span>
                 {worker.utilization_pct && <span className="muted">GPU {worker.utilization_pct}%</span>}
                 {worker.temperature_c && <span className="muted">{worker.temperature_c}°C</span>}
                 <span className="muted">queue {worker.queue_depth}</span>

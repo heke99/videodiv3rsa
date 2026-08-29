@@ -57,9 +57,7 @@ export async function assetRoutes(app: FastifyInstance): Promise<void> {
     checkSize(kind, bytes.byteLength);
 
     if (detected.kind !== (kind === "voice_reference" ? "audio" : kind)) {
-      throw new UploadRejected(
-        `This slot takes ${kind} but the file is ${detected.kind}.`,
-      );
+      throw new UploadRejected(`This slot takes ${kind} but the file is ${detected.kind}.`);
     }
 
     const created = await createAsset({
@@ -96,7 +94,9 @@ export async function assetRoutes(app: FastifyInstance): Promise<void> {
       // Signed and short-lived: the URL is not a permanent handle.
       url: await storage().signedUrl(version.storage_key, 900),
       versions: (await listVersions(id)).map((v) => ({
-        version: v.version, sha256: v.sha256, created_at: (v as { created_at?: string }).created_at,
+        version: v.version,
+        sha256: v.sha256,
+        created_at: (v as { created_at?: string }).created_at,
       })),
     };
   });
@@ -119,7 +119,13 @@ export async function assetRoutes(app: FastifyInstance): Promise<void> {
 
     const body = z
       .object({
-        rights_type: z.enum(["face_likeness", "voice_clone", "copyrighted_product", "private_footage", "music"]),
+        rights_type: z.enum([
+          "face_likeness",
+          "voice_clone",
+          "copyrighted_product",
+          "private_footage",
+          "music",
+        ]),
         scope: z.string().min(1).max(2000),
       })
       .parse(request.body);

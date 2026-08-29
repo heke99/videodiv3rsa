@@ -13,7 +13,11 @@ export default function CostsPage() {
   const [data, setData] = useState<Awaited<ReturnType<typeof adminApi.costs>> | null>(null);
 
   useEffect(() => {
-    if (session) adminApi.costs(dimension, session).then(setData).catch(() => setData(null));
+    if (session)
+      adminApi
+        .costs(dimension, session)
+        .then(setData)
+        .catch(() => setData(null));
   }, [session, dimension]);
 
   if (!session) return <div className="page muted">Sign in as platform staff.</div>;
@@ -38,7 +42,9 @@ export default function CostsPage() {
       {data && (
         <>
           <div className="card">
-            <div className="muted" style={{ fontSize: "0.85rem" }}>Cost per approved shot</div>
+            <div className="muted" style={{ fontSize: "0.85rem" }}>
+              Cost per approved shot
+            </div>
             <div style={{ fontSize: "1.6rem", fontWeight: 600 }}>
               {data.per_approved_shot.per_shot.toFixed(2)}
             </div>

@@ -67,10 +67,7 @@ export async function deleteProject(
 
   const advance = async (status: DeletionStage) => {
     outcome.status = status;
-    await queryOne("update public.deletion_jobs set status = $2 where id = $1 returning id", [
-      jobId,
-      status,
-    ]);
+    await queryOne("update public.deletion_jobs set status = $2 where id = $1 returning id", [jobId, status]);
   };
 
   try {
@@ -175,7 +172,11 @@ export async function expiredAssets(
   if (!policy) return [];
 
   const kinds =
-    scope === "renders" ? ["render"] : scope === "uploads" ? ["image", "video", "audio", "voice_reference"] : ["video", "image", "audio"];
+    scope === "renders"
+      ? ["render"]
+      : scope === "uploads"
+        ? ["image", "video", "audio", "voice_reference"]
+        : ["video", "image", "audio"];
 
   return query<{ asset_id: string; storage_key: string }>(
     `select v.asset_id, v.storage_key

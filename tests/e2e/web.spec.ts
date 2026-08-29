@@ -168,9 +168,7 @@ beforeAll(async () => {
   // Playwright version would download, so the provided executable is used
   // directly rather than fetching another copy.
   const provided = "/opt/pw-browsers/chromium";
-  browser = await chromium.launch(
-    existsSync(provided) ? { executablePath: provided } : {},
-  );
+  browser = await chromium.launch(existsSync(provided) ? { executablePath: provided } : {});
 }, 180_000);
 
 afterAll(async () => {
@@ -217,7 +215,9 @@ describe("the app in a browser", () => {
 
   it("explains a shot that fell short instead of showing an error", async () => {
     const page = await signedInPage(browser, "/projects/11111111-1111-4111-8111-111111111111");
-    await expect.poll(() => page.getByText(/could not reach the required quality/).count()).toBeGreaterThan(0);
+    await expect
+      .poll(() => page.getByText(/could not reach the required quality/).count())
+      .toBeGreaterThan(0);
 
     const text = await visibleText(page);
     for (const banned of ["inference", "traceback", "exception", "stack", "http 5", "internal server"]) {

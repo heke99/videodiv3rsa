@@ -38,7 +38,9 @@ export class S3StorageAdapter implements StorageAdapter {
 
   static fromConfig(cfg: AppConfig): S3StorageAdapter {
     if (!cfg.S3_ENDPOINT || !cfg.S3_REGION || !cfg.S3_ACCESS_KEY_ID || !cfg.S3_SECRET_ACCESS_KEY) {
-      throw new Error("S3 storage requires S3_ENDPOINT, S3_REGION, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY");
+      throw new Error(
+        "S3 storage requires S3_ENDPOINT, S3_REGION, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY",
+      );
     }
     return new S3StorageAdapter(cfg.STORAGE_BUCKET, {
       endpoint: cfg.S3_ENDPOINT,

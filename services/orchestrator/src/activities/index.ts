@@ -59,18 +59,26 @@ export interface Activities {
     bible: SceneBible;
     script: Script;
   }): Promise<ShotPlan>;
-  runPreflight(input: { job_id: string; plan: ShotPlan }): Promise<import("@videoai/contracts").PreflightReport>;
-  routeShots(input: { job_id: string; plan: ShotPlan; quality_mode: string }): Promise<
-    Array<{ shot_id: string; decision: RoutingDecision }>
-  >;
+  runPreflight(input: {
+    job_id: string;
+    plan: ShotPlan;
+  }): Promise<import("@videoai/contracts").PreflightReport>;
+  routeShots(input: {
+    job_id: string;
+    plan: ShotPlan;
+    quality_mode: string;
+  }): Promise<Array<{ shot_id: string; decision: RoutingDecision }>>;
 
   // -- audio ---------------------------------------------------------------
-  generateDialogue(input: { job_id: string; script: Script; bible: SceneBible }): Promise<
-    Array<{ dialogue_line_id: string; asset_id: string; length_samples: number }>
-  >;
-  alignDialogue(input: { job_id: string; dialogue_asset_ids: string[] }): Promise<
-    Array<{ dialogue_line_id: string; alignment_id: string }>
-  >;
+  generateDialogue(input: {
+    job_id: string;
+    script: Script;
+    bible: SceneBible;
+  }): Promise<Array<{ dialogue_line_id: string; asset_id: string; length_samples: number }>>;
+  alignDialogue(input: {
+    job_id: string;
+    dialogue_asset_ids: string[];
+  }): Promise<Array<{ dialogue_line_id: string; alignment_id: string }>>;
   generateAmbience(input: { job_id: string; shot_ids: string[] }): Promise<{ asset_ids: string[] }>;
 
   // -- references and shots -------------------------------------------------
@@ -108,7 +116,11 @@ export interface Activities {
   // -- bookkeeping ----------------------------------------------------------
   setJobStatus(input: { job_id: string; status: JobStatus; message?: string }): Promise<void>;
   saveCheckpoint(input: Checkpoint): Promise<void>;
-  loadCheckpoint(input: { job_id: string; stage: string; unit_id: string | null }): Promise<Checkpoint | null>;
+  loadCheckpoint(input: {
+    job_id: string;
+    stage: string;
+    unit_id: string | null;
+  }): Promise<Checkpoint | null>;
   recordSpend(input: {
     job_id: string;
     gpu_seconds: number;
@@ -136,9 +148,14 @@ export function idempotencyKey(parts: {
 }): string {
   return createHash("sha256")
     .update(
-      [parts.job_id, parts.shot_id, parts.attempt, parts.model_id, parts.model_version, parts.prompt_hash].join(
-        "|",
-      ),
+      [
+        parts.job_id,
+        parts.shot_id,
+        parts.attempt,
+        parts.model_id,
+        parts.model_version,
+        parts.prompt_hash,
+      ].join("|"),
     )
     .digest("hex");
 }

@@ -187,7 +187,10 @@ export function evaluatePromotion(input: PromotionInput): PromotionDecision {
  * Nothing gates taking a model out of traffic: a rollback that had to pass
  * checks would be a rollback nobody could perform during an incident.
  */
-export function rollback(modelId: string, version: string): {
+export function rollback(
+  modelId: string,
+  version: string,
+): {
   model_id: string;
   version: string;
   lifecycle: ModelLifecycle;

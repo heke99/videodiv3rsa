@@ -120,9 +120,15 @@ async function persist(request: QcRequest, evaluation: EnsembleResult): Promise<
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        returning id`,
       [
-        request.organization_id, request.project_id, request.job_id,
-        request.subject_kind, request.subject_id, request.asset_id,
-        request.profile, evaluation.overall, evaluation.passed,
+        request.organization_id,
+        request.project_id,
+        request.job_id,
+        request.subject_kind,
+        request.subject_id,
+        request.asset_id,
+        request.profile,
+        evaluation.overall,
+        evaluation.passed,
       ],
     );
     const evaluationId = inserted.rows[0]!.id;
@@ -135,8 +141,14 @@ async function persist(request: QcRequest, evaluation: EnsembleResult): Promise<
            (evaluation_id, organization_id, dimension, score, threshold, passed)
          values ($1, $2, $3, $4, $5, $6)
          on conflict (evaluation_id, dimension) do nothing`,
-        [evaluationId, request.organization_id, dimension, score, threshold,
-         threshold === null || score >= threshold],
+        [
+          evaluationId,
+          request.organization_id,
+          dimension,
+          score,
+          threshold,
+          threshold === null || score >= threshold,
+        ],
       );
     }
 
@@ -147,8 +159,15 @@ async function persist(request: QcRequest, evaluation: EnsembleResult): Promise<
              (evaluation_id, organization_id, judge_id, judge_version, code, severity, message, frames, entity_ref)
            values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [
-            evaluationId, request.organization_id, judge.judge_id, judge.judge_version,
-            found.code, found.severity, found.message, found.frames, found.entity_ref,
+            evaluationId,
+            request.organization_id,
+            judge.judge_id,
+            judge.judge_version,
+            found.code,
+            found.severity,
+            found.message,
+            found.frames,
+            found.entity_ref,
           ],
         );
       }
@@ -172,8 +191,12 @@ export async function recordHumanEvaluation(input: {
        (organization_id, asset_id, evaluation_id, human_score, failure_labels, rated_by)
      values ($1, $2, $3, $4, $5, $6) returning id`,
     [
-      input.organization_id, input.asset_id, input.evaluation_id,
-      input.human_score, input.failure_labels, input.rated_by,
+      input.organization_id,
+      input.asset_id,
+      input.evaluation_id,
+      input.human_score,
+      input.failure_labels,
+      input.rated_by,
     ],
   );
 }

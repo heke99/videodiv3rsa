@@ -30,14 +30,26 @@ afterAll(async () => {
 
 function shot(id: string, index: number, frames: number, dialogue: string[] = []): Shot {
   return {
-    id, scene_id: "scene_01", index,
-    description: "d", action: "a", shot_type: "medium", duration_frames: frames,
+    id,
+    scene_id: "scene_01",
+    index,
+    description: "d",
+    action: "a",
+    shot_type: "medium",
+    duration_frames: frames,
     camera: { framing: "medium", lens: "", movement: "static", height: "eye_level", focus_behavior: "" },
-    character_ids: [], product_ids: [], location_id: null, dialogue_line_ids: dialogue,
-    motion_complexity: 0.5, continuity_requirement: 0.5,
-    requires_identity_lock: false, requires_product_fidelity: false,
+    character_ids: [],
+    product_ids: [],
+    location_id: null,
+    dialogue_line_ids: dialogue,
+    motion_complexity: 0.5,
+    continuity_requirement: 0.5,
+    requires_identity_lock: false,
+    requires_product_fidelity: false,
     preferred_generation_kind: "text_to_video",
-    start_frame_asset: null, end_frame_asset: null, notes: "",
+    start_frame_asset: null,
+    end_frame_asset: null,
+    notes: "",
   };
 }
 
@@ -52,15 +64,33 @@ function plan(shots: Shot[]): ShotPlan {
 
 async function clip(name: string, seconds: number): Promise<string> {
   const out = path.join(dir, name);
-  await ffmpeg(["-f", "lavfi", "-i", `testsrc2=s=640x360:r=24:d=${seconds}`,
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", out]);
+  await ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    `testsrc2=s=640x360:r=24:d=${seconds}`,
+    "-c:v",
+    "libx264",
+    "-pix_fmt",
+    "yuv420p",
+    out,
+  ]);
   return out;
 }
 
 async function speech(name: string, seconds: number): Promise<string> {
   const out = path.join(dir, name);
-  await ffmpeg(["-f", "lavfi", "-i", `sine=frequency=440:sample_rate=48000:duration=${seconds}`,
-                "-af", "volume=0.2", "-c:a", "pcm_s16le", out]);
+  await ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    `sine=frequency=440:sample_rate=48000:duration=${seconds}`,
+    "-af",
+    "volume=0.2",
+    "-c:a",
+    "pcm_s16le",
+    out,
+  ]);
   return out;
 }
 
@@ -80,10 +110,16 @@ describe("plan to delivered file", () => {
       timebase,
       plan: plan(shots),
       shot_assets: { shot_01: "asset_a", shot_02: "asset_b" },
-      dialogue: [{
-        dialogue_line_id: "line_1", shot_id: "shot_01", asset_id: "asset_line",
-        length_samples: 96_000, pause_before_samples: 0, pause_after_samples: 0,
-      }],
+      dialogue: [
+        {
+          dialogue_line_id: "line_1",
+          shot_id: "shot_01",
+          asset_id: "asset_line",
+          length_samples: 96_000,
+          pause_before_samples: 0,
+          pause_after_samples: 0,
+        },
+      ],
       loudness_profile: "social",
     });
 

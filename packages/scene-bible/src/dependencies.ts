@@ -1,10 +1,4 @@
-import type {
-  DependencyKind,
-  InvalidationResult,
-  Shot,
-  ShotDependency,
-  ShotPlan,
-} from "@videoai/contracts";
+import type { DependencyKind, InvalidationResult, Shot, ShotDependency, ShotPlan } from "@videoai/contracts";
 
 /**
  * Shot dependency graph and invalidation (spec section 15).

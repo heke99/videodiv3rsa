@@ -19,7 +19,10 @@ export default function ModelsPage() {
 
   const load = useCallback(() => {
     if (!session) return;
-    adminApi.models(session).then((r) => setModels(r.models)).catch((e: Error) => setError(e.message));
+    adminApi
+      .models(session)
+      .then((r) => setModels(r.models))
+      .catch((e: Error) => setError(e.message));
   }, [session]);
 
   useEffect(load, [load]);
@@ -40,15 +43,18 @@ export default function ModelsPage() {
   if (!session) return <div className="page muted">Sign in as platform staff.</div>;
 
   const routable = models?.filter(
-    (m) => m.license_status === "approved" && m.commercial_use && ["production", "canary"].includes(m.lifecycle ?? ""),
+    (m) =>
+      m.license_status === "approved" &&
+      m.commercial_use &&
+      ["production", "canary"].includes(m.lifecycle ?? ""),
   ).length;
 
   return (
     <div className="page stack">
       <h1 style={{ margin: 0, fontSize: "1.4rem" }}>Models</h1>
       <p className="muted" style={{ margin: 0 }}>
-        {routable ?? 0} of {models?.length ?? 0} are routable. A model reaches traffic only with an
-        approved licence and a promoted version.
+        {routable ?? 0} of {models?.length ?? 0} are routable. A model reaches traffic only with an approved
+        licence and a promoted version.
       </p>
 
       {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
@@ -61,7 +67,10 @@ export default function ModelsPage() {
 
           return (
             <div key={key} className="card stack" style={{ gap: "0.6rem" }}>
-              <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+              <div
+                className="row"
+                style={{ justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}
+              >
                 <div>
                   <strong>{model.display_name}</strong>{" "}
                   <span className="muted" style={{ fontSize: "0.85rem" }}>

@@ -81,9 +81,7 @@ export class Director {
       if (parsed.ok) {
         const validated = request.schema.safeParse(parsed.value);
         if (validated.success) return validated.data;
-        lastIssues = validated.error.issues.map(
-          (i) => `${i.path.join(".") || "(root)"}: ${i.message}`,
-        );
+        lastIssues = validated.error.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`);
       } else {
         lastIssues = [parsed.error];
       }

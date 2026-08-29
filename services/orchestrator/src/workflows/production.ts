@@ -169,10 +169,7 @@ export async function production(input: ProductionInput): Promise<ProductionResu
 
       const decision = decisions.get(shot.id);
       if (!decision) {
-        throw ApplicationFailure.nonRetryable(
-          `No routing decision for shot ${shot.id}`,
-          "RoutingError",
-        );
+        throw ApplicationFailure.nonRetryable(`No routing decision for shot ${shot.id}`, "RoutingError");
       }
 
       const outcome = await produceShot(shot, decision);

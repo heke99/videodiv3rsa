@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Shot, ShotPlan } from "@videoai/contracts";
-import {
-  DUCKING,
-  applyDucking,
-  assembleTimeline,
-  diffTimelines,
-  summariseDiff,
-} from "@videoai/timeline";
+import { DUCKING, applyDucking, assembleTimeline, diffTimelines, summariseDiff } from "@videoai/timeline";
 
 /**
  * Timeline assembly is where the video clock and the audio clock have to agree
@@ -20,15 +14,26 @@ const PROJECT = "00000000-0000-4000-8000-000000000001";
 
 function shot(id: string, index: number, frames: number): Shot {
   return {
-    id, scene_id: "scene_01", index,
-    description: "d", action: "a", shot_type: "medium",
+    id,
+    scene_id: "scene_01",
+    index,
+    description: "d",
+    action: "a",
+    shot_type: "medium",
     duration_frames: frames,
     camera: { framing: "medium", lens: "", movement: "static", height: "eye_level", focus_behavior: "" },
-    character_ids: [], product_ids: [], location_id: null, dialogue_line_ids: [],
-    motion_complexity: 0.5, continuity_requirement: 0.5,
-    requires_identity_lock: false, requires_product_fidelity: false,
+    character_ids: [],
+    product_ids: [],
+    location_id: null,
+    dialogue_line_ids: [],
+    motion_complexity: 0.5,
+    continuity_requirement: 0.5,
+    requires_identity_lock: false,
+    requires_product_fidelity: false,
     preferred_generation_kind: "text_to_video",
-    start_frame_asset: null, end_frame_asset: null, notes: "",
+    start_frame_asset: null,
+    end_frame_asset: null,
+    notes: "",
   };
 }
 
@@ -65,10 +70,16 @@ describe("timeline assembly", () => {
       timebase,
       plan: plan([shot("shot_01", 0, 24)]),
       shot_assets: { shot_01: "a1" },
-      dialogue: [{
-        dialogue_line_id: "line_1", shot_id: "shot_01", asset_id: "d1",
-        length_samples: 120_000, pause_before_samples: 0, pause_after_samples: 0,
-      }],
+      dialogue: [
+        {
+          dialogue_line_id: "line_1",
+          shot_id: "shot_01",
+          asset_id: "d1",
+          length_samples: 120_000,
+          pause_before_samples: 0,
+          pause_after_samples: 0,
+        },
+      ],
     });
 
     expect(extended_shots).toEqual([{ shot_id: "shot_01", from_frames: 24, to_frames: 60 }]);
@@ -87,10 +98,16 @@ describe("timeline assembly", () => {
       plan: plan([shot("shot_01", 0, 24)]),
       shot_assets: { shot_01: "a1" },
       // 50001 samples is a hair over 25 frames.
-      dialogue: [{
-        dialogue_line_id: "line_1", shot_id: "shot_01", asset_id: "d1",
-        length_samples: 50_001, pause_before_samples: 0, pause_after_samples: 0,
-      }],
+      dialogue: [
+        {
+          dialogue_line_id: "line_1",
+          shot_id: "shot_01",
+          asset_id: "d1",
+          length_samples: 50_001,
+          pause_before_samples: 0,
+          pause_after_samples: 0,
+        },
+      ],
     });
     expect(extended_shots[0]!.to_frames).toBe(26);
   });
@@ -101,10 +118,16 @@ describe("timeline assembly", () => {
       timebase,
       plan: plan([shot("shot_01", 0, 48)]),
       shot_assets: { shot_01: "a1" },
-      dialogue: [{
-        dialogue_line_id: "line_1", shot_id: "shot_01", asset_id: "d1",
-        length_samples: 48_000, pause_before_samples: 0, pause_after_samples: 0,
-      }],
+      dialogue: [
+        {
+          dialogue_line_id: "line_1",
+          shot_id: "shot_01",
+          asset_id: "d1",
+          length_samples: 48_000,
+          pause_before_samples: 0,
+          pause_after_samples: 0,
+        },
+      ],
     });
     expect(extended_shots).toEqual([]);
   });
@@ -115,10 +138,16 @@ describe("timeline assembly", () => {
       timebase,
       plan: plan([shot("shot_01", 0, 48), shot("shot_02", 1, 48)]),
       shot_assets: { shot_01: "a1", shot_02: "a2" },
-      dialogue: [{
-        dialogue_line_id: "line_2", shot_id: "shot_02", asset_id: "d2",
-        length_samples: 24_000, pause_before_samples: 0, pause_after_samples: 0,
-      }],
+      dialogue: [
+        {
+          dialogue_line_id: "line_2",
+          shot_id: "shot_02",
+          asset_id: "d2",
+          length_samples: 24_000,
+          pause_before_samples: 0,
+          pause_after_samples: 0,
+        },
+      ],
     });
 
     const line = timeline.events.find((e) => e.id === "ev_line_2")!;
@@ -132,10 +161,16 @@ describe("timeline assembly", () => {
       timebase,
       plan: plan([shot("shot_01", 0, 120)]),
       shot_assets: { shot_01: "a1" },
-      dialogue: [{
-        dialogue_line_id: "line_1", shot_id: "shot_01", asset_id: "d1",
-        length_samples: 24_000, pause_before_samples: 12_000, pause_after_samples: 0,
-      }],
+      dialogue: [
+        {
+          dialogue_line_id: "line_1",
+          shot_id: "shot_01",
+          asset_id: "d1",
+          length_samples: 24_000,
+          pause_before_samples: 12_000,
+          pause_after_samples: 0,
+        },
+      ],
     });
     const line = timeline.events.find((e) => e.id === "ev_line_1")!;
     if (line.kind === "audio") expect(line.start_sample).toBe(12_000);
@@ -147,20 +182,26 @@ describe("timeline assembly", () => {
       timebase,
       plan: plan([shot("shot_01", 0, 48), shot("shot_02", 1, 48)]),
       shot_assets: { shot_01: "a1", shot_02: "a2" },
-      dialogue: [{
-        dialogue_line_id: "line_2", shot_id: "shot_02", asset_id: "d2",
-        length_samples: 24_000, pause_before_samples: 0, pause_after_samples: 0,
-        alignment: {
+      dialogue: [
+        {
           dialogue_line_id: "line_2",
-          asset: { asset_id: "d2" },
-          sample_rate: 48_000,
-          words: [
-            { word: "hello", start_sample: 0, end_sample: 12_000, confidence: 1 },
-            { word: "there", start_sample: 12_000, end_sample: 24_000, confidence: 1 },
-          ],
-          phonemes: [],
+          shot_id: "shot_02",
+          asset_id: "d2",
+          length_samples: 24_000,
+          pause_before_samples: 0,
+          pause_after_samples: 0,
+          alignment: {
+            dialogue_line_id: "line_2",
+            asset: { asset_id: "d2" },
+            sample_rate: 48_000,
+            words: [
+              { word: "hello", start_sample: 0, end_sample: 12_000, confidence: 1 },
+              { word: "there", start_sample: 12_000, end_sample: 24_000, confidence: 1 },
+            ],
+            phonemes: [],
+          },
         },
-      }],
+      ],
     });
 
     const caption = timeline.events.find((e) => e.kind === "caption")!;
@@ -179,10 +220,16 @@ describe("timeline assembly", () => {
       timebase,
       plan: plan([shot("shot_01", 0, 48), shot("shot_02", 1, 48)]),
       shot_assets: { shot_01: "a1", shot_02: "a2" },
-      dialogue: [{
-        dialogue_line_id: "line_1", shot_id: "shot_01", asset_id: "d1",
-        length_samples: 24_000, pause_before_samples: 0, pause_after_samples: 0,
-      }],
+      dialogue: [
+        {
+          dialogue_line_id: "line_1",
+          shot_id: "shot_01",
+          asset_id: "d1",
+          length_samples: 24_000,
+          pause_before_samples: 0,
+          pause_after_samples: 0,
+        },
+      ],
       beds: [{ kind: "MUSIC", asset_id: "m1", start_sample: 0, length_samples: 192_000 }],
     });
     expect(validateTimeline(timeline)).toEqual([]);
@@ -191,18 +238,36 @@ describe("timeline assembly", () => {
 
 describe("ducking", () => {
   const music = {
-    id: "ev_music", track_id: "music", kind: "audio" as const,
-    asset: { asset_id: "m1" }, shot_id: null, scene_id: null,
-    start_sample: 0, end_sample: 480_000, source_start_sample: 0,
-    gain_db: -6, fade_in_samples: 0, fade_out_samples: 0, pan: 0,
+    id: "ev_music",
+    track_id: "music",
+    kind: "audio" as const,
+    asset: { asset_id: "m1" },
+    shot_id: null,
+    scene_id: null,
+    start_sample: 0,
+    end_sample: 480_000,
+    source_start_sample: 0,
+    gain_db: -6,
+    fade_in_samples: 0,
+    fade_out_samples: 0,
+    pan: 0,
     ducking_group: "music" as const,
   };
 
   const speech = {
-    id: "ev_line", track_id: "dialogue", kind: "audio" as const,
-    asset: { asset_id: "d1" }, shot_id: null, scene_id: null,
-    start_sample: 96_000, end_sample: 192_000, source_start_sample: 0,
-    gain_db: 0, fade_in_samples: 0, fade_out_samples: 0, pan: 0,
+    id: "ev_line",
+    track_id: "dialogue",
+    kind: "audio" as const,
+    asset: { asset_id: "d1" },
+    shot_id: null,
+    scene_id: null,
+    start_sample: 96_000,
+    end_sample: 192_000,
+    source_start_sample: 0,
+    gain_db: 0,
+    fade_in_samples: 0,
+    fade_out_samples: 0,
+    pan: 0,
     ducking_group: "dialogue" as const,
   };
 
@@ -292,12 +357,8 @@ describe("timeline diff", () => {
     }).timeline;
 
     const diff = diffTimelines(base, after);
-    expect(diff.changes).toContainEqual(
-      expect.objectContaining({ kind: "retimed", event_id: "ev_shot_01" }),
-    );
-    expect(diff.changes).toContainEqual(
-      expect.objectContaining({ kind: "moved", event_id: "ev_shot_02" }),
-    );
+    expect(diff.changes).toContainEqual(expect.objectContaining({ kind: "retimed", event_id: "ev_shot_01" }));
+    expect(diff.changes).toContainEqual(expect.objectContaining({ kind: "moved", event_id: "ev_shot_02" }));
     expect(diff.duration_frames_after).toBe(120);
   });
 

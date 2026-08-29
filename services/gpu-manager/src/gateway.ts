@@ -75,6 +75,8 @@ function computeSignature(
   envelope: Omit<WorkerEnvelope, "signature">,
   bodyHash: string,
 ): string {
-  const payload = [envelope.job_id, envelope.nonce, envelope.issued_at, envelope.expires_at, bodyHash].join("\n");
+  const payload = [envelope.job_id, envelope.nonce, envelope.issued_at, envelope.expires_at, bodyHash].join(
+    "\n",
+  );
   return createHmac("sha256", key).update(payload).digest("hex");
 }

@@ -97,10 +97,18 @@ export function classify(evaluation: QualityEvaluation, entityChanged = false): 
     return { failure_class: "product_fault", driving_findings: codes, rationale: "The product is wrong." };
   }
   if (codes.every((c) => AUDIO_CODES.has(c))) {
-    return { failure_class: "audio_fault", driving_findings: codes, rationale: "Audio only; picture is sound." };
+    return {
+      failure_class: "audio_fault",
+      driving_findings: codes,
+      rationale: "Audio only; picture is sound.",
+    };
   }
   if (codes.some((c) => MOTION_CODES.has(c))) {
-    return { failure_class: "motion_fault", driving_findings: codes, rationale: "The motion is the failure." };
+    return {
+      failure_class: "motion_fault",
+      driving_findings: codes,
+      rationale: "The motion is the failure.",
+    };
   }
   if (severe.every((f) => f.frames.length > 0)) {
     return {
@@ -111,7 +119,11 @@ export function classify(evaluation: QualityEvaluation, entityChanged = false): 
     };
   }
 
-  return { failure_class: "whole_shot_failure", driving_findings: codes, rationale: "No cheaper cause fits." };
+  return {
+    failure_class: "whole_shot_failure",
+    driving_findings: codes,
+    rationale: "No cheaper cause fits.",
+  };
 }
 
 /** The smallest scope that can address each class. */

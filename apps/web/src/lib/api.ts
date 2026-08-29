@@ -162,8 +162,19 @@ export const api = {
   getShot: (id: string, o: RequestOptions) =>
     request<{
       shot: ShotSummary;
-      versions: Array<{ version: number; asset_id: string | null; created_at: string; overall: number | null; passed: boolean | null }>;
-      evaluation: { id: string; overall: number; passed: boolean; metrics: Array<{ dimension: string; score: number; threshold: number | null; passed: boolean }> } | null;
+      versions: Array<{
+        version: number;
+        asset_id: string | null;
+        created_at: string;
+        overall: number | null;
+        passed: boolean | null;
+      }>;
+      evaluation: {
+        id: string;
+        overall: number;
+        passed: boolean;
+        metrics: Array<{ dimension: string; score: number; threshold: number | null; passed: boolean }>;
+      } | null;
     }>(`/api/shots/${id}`, o),
 
   repairShot: (id: string, scope: string, o: RequestOptions) =>
@@ -171,22 +182,31 @@ export const api = {
 
   restoreShot: (id: string, version: number, o: RequestOptions) =>
     request<{ restored_version: number }>(`/api/shots/${id}/restore`, {
-      ...o, method: "POST", body: { version },
+      ...o,
+      method: "POST",
+      body: { version },
     }),
 
   reorderShots: (projectId: string, order: string[], o: RequestOptions) =>
     request<{ reordered: number }>(`/api/projects/${projectId}/shots/reorder`, {
-      ...o, method: "POST", body: { order },
+      ...o,
+      method: "POST",
+      body: { order },
     }),
 
   getAsset: (id: string, o: RequestOptions) =>
-    request<{ asset_id: string; version: number; mime: string; url: string; versions: Array<{ version: number }> }>(
-      `/api/assets/${id}`, o,
-    ),
+    request<{
+      asset_id: string;
+      version: number;
+      mime: string;
+      url: string;
+      versions: Array<{ version: number }>;
+    }>(`/api/assets/${id}`, o),
 
   library: (kind: string, o: RequestOptions & { projectId?: string }) =>
     request<{ entries: Array<Record<string, unknown>> }>(
-      `/api/library/${kind}${o.projectId ? `?project_id=${o.projectId}` : ""}`, o,
+      `/api/library/${kind}${o.projectId ? `?project_id=${o.projectId}` : ""}`,
+      o,
     ),
 
   renders: (projectId: string, o: RequestOptions) =>

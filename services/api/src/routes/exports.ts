@@ -70,8 +70,14 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
        values ($1, $2, $3, $4, $5, $6, $7, 'aac', $8)
        returning id`,
       [
-        caller.organization_id, render.id, body.aspect_ratio, preset.width, preset.height,
-        body.container, body.container === "webm" ? "vp9" : "h264", body.burned_captions,
+        caller.organization_id,
+        render.id,
+        body.aspect_ratio,
+        preset.width,
+        preset.height,
+        body.container,
+        body.container === "webm" ? "vp9" : "h264",
+        body.burned_captions,
       ],
     );
 

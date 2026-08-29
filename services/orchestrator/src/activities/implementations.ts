@@ -294,7 +294,13 @@ export function createActivities(): Activities {
                status = 'succeeded',
                finished_at = now()
          returning id`,
-        [checkpoint.job_id, checkpoint.stage, checkpoint.unit_id, checkpoint.inputs_hash, checkpoint.result ?? null],
+        [
+          checkpoint.job_id,
+          checkpoint.stage,
+          checkpoint.unit_id,
+          checkpoint.inputs_hash,
+          checkpoint.result ?? null,
+        ],
       );
     },
 
@@ -342,18 +348,15 @@ export function createActivities(): Activities {
         );
 
         const current = row.budget_spend as Record<string, number>;
-        await client.query(
-          "update public.generation_jobs set budget_spend = $2 where id = $1",
-          [
-            job_id,
-            {
-              generation_attempts: (current["generation_attempts"] ?? 0) + (generation_attempts ?? 0),
-              repair_attempts: (current["repair_attempts"] ?? 0) + (repair_attempts ?? 0),
-              gpu_seconds: (current["gpu_seconds"] ?? 0) + gpu_seconds,
-              cost_units: (current["cost_units"] ?? 0) + cost_units,
-            },
-          ],
-        );
+        await client.query("update public.generation_jobs set budget_spend = $2 where id = $1", [
+          job_id,
+          {
+            generation_attempts: (current["generation_attempts"] ?? 0) + (generation_attempts ?? 0),
+            repair_attempts: (current["repair_attempts"] ?? 0) + (repair_attempts ?? 0),
+            gpu_seconds: (current["gpu_seconds"] ?? 0) + gpu_seconds,
+            cost_units: (current["cost_units"] ?? 0) + cost_units,
+          },
+        ]);
       });
     },
 
@@ -446,7 +449,12 @@ export function createActivities(): Activities {
         `insert into public.${versions} (${fk}, organization_id, version, document, schema_version)
          select $1, $2, coalesce(max(version), 0) + 1, $3, $4
          from public.${versions} where ${fk} = $1`,
-        [parentId, job.organization_id, document, (document as { schema_version?: string }).schema_version ?? "1.0"],
+        [
+          parentId,
+          job.organization_id,
+          document,
+          (document as { schema_version?: string }).schema_version ?? "1.0",
+        ],
       );
       await client.query(
         `update public.${table} set current_version =
@@ -495,10 +503,18 @@ export function createActivities(): Activities {
                  continuity_requirement = excluded.continuity_requirement
            returning id`,
           [
-            job.project_id, sceneId, job.organization_id, shot.id, shot.index,
-            shot.duration_frames, shot.shot_type, shot.preferred_generation_kind,
-            shot.requires_identity_lock, shot.requires_product_fidelity,
-            shot.motion_complexity, shot.continuity_requirement,
+            job.project_id,
+            sceneId,
+            job.organization_id,
+            shot.id,
+            shot.index,
+            shot.duration_frames,
+            shot.shot_type,
+            shot.preferred_generation_kind,
+            shot.requires_identity_lock,
+            shot.requires_product_fidelity,
+            shot.motion_complexity,
+            shot.continuity_requirement,
           ],
         );
         shotIds.set(shot.id, inserted.rows[0]!.id);

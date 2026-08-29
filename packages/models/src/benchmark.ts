@@ -221,7 +221,9 @@ export function summarise(
     if (!golden) continue;
 
     expected += golden.focus.length;
-    for (const [dimension, score] of Object.entries(measurement.scores) as Array<[QualityDimension, number]>) {
+    for (const [dimension, score] of Object.entries(measurement.scores) as Array<
+      [QualityDimension, number]
+    >) {
       const isFocus = golden.focus.includes(dimension);
       if (isFocus) measured += 1;
       const w = isFocus ? 2 : 1;
@@ -271,7 +273,9 @@ export function compareToBaseline(
     const before = baselineById.get(measurement.case_id);
     if (!before) continue;
 
-    for (const [dimension, after] of Object.entries(measurement.scores) as Array<[QualityDimension, number]>) {
+    for (const [dimension, after] of Object.entries(measurement.scores) as Array<
+      [QualityDimension, number]
+    >) {
       const previous = before.scores[dimension];
       if (previous === undefined) continue;
       if (previous - after > tolerance.perCase) {
@@ -289,9 +293,7 @@ export function compareToBaseline(
   }
 
   if (candidate.overall < baseline.overall - tolerance.overall) {
-    reasons.push(
-      `Overall fell from ${baseline.overall.toFixed(3)} to ${candidate.overall.toFixed(3)}.`,
-    );
+    reasons.push(`Overall fell from ${baseline.overall.toFixed(3)} to ${candidate.overall.toFixed(3)}.`);
   }
 
   if (
@@ -299,7 +301,7 @@ export function compareToBaseline(
     candidate.runtime_ms_total > baseline.runtime_ms_total * (1 + tolerance.runtime)
   ) {
     reasons.push(
-      `Runtime rose by ${(((candidate.runtime_ms_total / baseline.runtime_ms_total) - 1) * 100).toFixed(0)}%.`,
+      `Runtime rose by ${((candidate.runtime_ms_total / baseline.runtime_ms_total - 1) * 100).toFixed(0)}%.`,
     );
   }
 

@@ -53,7 +53,8 @@ const CALLS: Record<keyof Activities, () => Promise<unknown>> = (() => {
     generateScript: () => activities.generateScript(any({ job_id: "j" })),
     generateShotPlan: () => activities.generateShotPlan(any({ job_id: "j" })),
     runPreflight: () => activities.runPreflight(any({ job_id: "j", plan: { shots: [] } })),
-    routeShots: () => activities.routeShots(any({ job_id: "j", plan: { shots: [] }, quality_mode: "STANDARD" })),
+    routeShots: () =>
+      activities.routeShots(any({ job_id: "j", plan: { shots: [] }, quality_mode: "STANDARD" })),
     generateDialogue: () => activities.generateDialogue(any({ job_id: "j" })),
     alignDialogue: () => activities.alignDialogue(any({ job_id: "j", dialogue_asset_ids: [] })),
     generateAmbience: () => activities.generateAmbience(any({ job_id: "j", shot_ids: [] })),

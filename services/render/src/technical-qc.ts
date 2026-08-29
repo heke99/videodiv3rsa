@@ -210,8 +210,18 @@ async function detectAnomalies(
     // -vsync 0 keeps the reported frame count equal to what survives the
     // filter, which is what makes the duplicate ratio measurable at all.
     stderr = await ffmpeg(
-      ["-i", path, "-vf", "blackdetect=d=0.05:pic_th=0.98,mpdecimate", "-an",
-       "-vsync", "0", "-f", "null", "-"],
+      [
+        "-i",
+        path,
+        "-vf",
+        "blackdetect=d=0.05:pic_th=0.98,mpdecimate",
+        "-an",
+        "-vsync",
+        "0",
+        "-f",
+        "null",
+        "-",
+      ],
       10 * 60_000,
     );
   } catch {
@@ -229,9 +239,7 @@ async function detectAnomalies(
   // far side are counted instead: everything missing was a duplicate.
   const survived = lastFrameCount(stderr);
   const duplicate =
-    frameCount > 0 && survived !== null
-      ? Math.min(Math.max(frameCount - survived, 0) / frameCount, 1)
-      : 0;
+    frameCount > 0 && survived !== null ? Math.min(Math.max(frameCount - survived, 0) / frameCount, 1) : 0;
 
   const silent = hasAudio ? await silenceRatio(path, durationSeconds) : 0;
 

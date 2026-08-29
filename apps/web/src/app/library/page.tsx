@@ -58,8 +58,8 @@ export default function LibraryPage() {
 
       {entries?.length === 0 && (
         <div className="card muted">
-          Nothing here yet. Characters, products and voices created in a project can be kept here and
-          reused, which is how they stay identical between videos.
+          Nothing here yet. Characters, products and voices created in a project can be kept here and reused,
+          which is how they stay identical between videos.
         </div>
       )}
 

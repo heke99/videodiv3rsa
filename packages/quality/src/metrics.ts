@@ -95,9 +95,7 @@ export function temporalConsistency(diff: number[]): { score: number; spikes: nu
   const scale = mad * 1.4826;
   if (scale === 0) {
     // Perfectly uniform differences: anything that differs at all is a spike.
-    const spikes = diff
-      .map((value, index) => (value !== middle ? index + 1 : -1))
-      .filter((i) => i > 0);
+    const spikes = diff.map((value, index) => (value !== middle ? index + 1 : -1)).filter((i) => i > 0);
     return { score: spikes.length === 0 ? 1 : clamp(1 - spikes.length / diff.length), spikes };
   }
 
@@ -163,12 +161,17 @@ export async function structuralSimilarity(
     // no summary line, so the mean is computed here.
     const stdout = await ffmpegStdout(
       [
-        "-i", distorted, "-i", reference,
+        "-i",
+        distorted,
+        "-i",
+        reference,
         "-lavfi",
         "[0:v]settb=AVTB,setpts=PTS-STARTPTS,format=yuv420p[d];" +
           "[1:v]settb=AVTB,setpts=PTS-STARTPTS,format=yuv420p[r];" +
           "[r][d]scale2ref[rs][ds];[ds][rs]ssim=stats_file=-",
-        "-f", "null", "-",
+        "-f",
+        "null",
+        "-",
       ],
       10 * 60_000,
     );
@@ -220,8 +223,13 @@ export async function firstSoundSample(path: string, sampleRate: number): Promis
 export async function durationSeconds(path: string): Promise<number> {
   try {
     const out = await ffprobe([
-      "-v", "error", "-show_entries", "format=duration",
-      "-of", "default=nokey=1:noprint_wrappers=1", path,
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "default=nokey=1:noprint_wrappers=1",
+      path,
     ]);
     const value = Number(out.trim());
     return Number.isFinite(value) ? value : 0;

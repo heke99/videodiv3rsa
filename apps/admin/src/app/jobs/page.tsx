@@ -10,7 +10,11 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Array<Record<string, unknown>> | null>(null);
 
   useEffect(() => {
-    if (session) adminApi.jobs(session).then((r) => setJobs(r.jobs)).catch(() => setJobs([]));
+    if (session)
+      adminApi
+        .jobs(session)
+        .then((r) => setJobs(r.jobs))
+        .catch(() => setJobs([]));
   }, [session]);
 
   if (!session) return <div className="page muted">Sign in as platform staff.</div>;
@@ -37,8 +41,8 @@ export default function JobsPage() {
                 </span>
               </div>
               <span className="muted" style={{ fontSize: "0.8rem" }}>
-                {Math.round(spend["gpu_seconds"] ?? 0)}s GPU ·{" "}
-                {spend["generation_attempts"] ?? 0} generations · {spend["repair_attempts"] ?? 0} repairs
+                {Math.round(spend["gpu_seconds"] ?? 0)}s GPU · {spend["generation_attempts"] ?? 0} generations
+                · {spend["repair_attempts"] ?? 0} repairs
                 {text(job["error_message"]) ? ` · ${text(job["error_message"]).slice(0, 120)}` : ""}
               </span>
             </div>

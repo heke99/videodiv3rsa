@@ -188,10 +188,9 @@ export async function projectRoutes(app: FastifyInstance): Promise<void> {
     const { id } = Id.parse(request.params);
     await assertOwned("generation_jobs", id, caller);
 
-    await queryOne(
-      "update public.generation_jobs set cancel_requested = true where id = $1 returning id",
-      [id],
-    );
+    await queryOne("update public.generation_jobs set cancel_requested = true where id = $1 returning id", [
+      id,
+    ]);
     await cancelProduction(id);
     return { cancelled: true };
   });

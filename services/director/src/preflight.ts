@@ -39,9 +39,7 @@ export function preflight(input: PreflightInput): PreflightReport {
 
   const missing = input.requiredModelIds.filter((id) => !input.installedModelIds.includes(id));
   if (missing.length > 0) {
-    blockers.push(
-      `These models are not installed and verified on any worker: ${missing.join(", ")}.`,
-    );
+    blockers.push(`These models are not installed and verified on any worker: ${missing.join(", ")}.`);
   }
 
   if (input.availableProfileCount === 0) {

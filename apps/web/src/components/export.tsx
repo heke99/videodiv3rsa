@@ -123,7 +123,10 @@ export function ExportPanel({ projectId, session }: { projectId: string; session
                   {item.burned_captions ? " · captions" : ""}
                 </span>
                 {item.status === "completed" ? (
-                  <button onClick={() => download(item.id)} style={{ fontSize: "0.8rem", padding: "0.25rem 0.6rem" }}>
+                  <button
+                    onClick={() => download(item.id)}
+                    style={{ fontSize: "0.8rem", padding: "0.25rem 0.6rem" }}
+                  >
                     Download
                   </button>
                 ) : (

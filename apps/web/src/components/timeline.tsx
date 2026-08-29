@@ -34,9 +34,7 @@ export function TimelineTracks({
   const { timeline, tracks, events } = data;
 
   if (!timeline) {
-    return (
-      <div className="card muted">The timeline appears once the first scenes have been generated.</div>
-    );
+    return <div className="card muted">The timeline appears once the first scenes have been generated.</div>;
   }
 
   const fps = timeline.frame_rate_num / timeline.frame_rate_den;

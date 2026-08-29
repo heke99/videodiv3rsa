@@ -17,13 +17,13 @@ nothing behind.
 
 ### What it covers
 
-| Series | Question |
-|---|---|
-| A | Can an ordinary user reach outside their organisation, or write anything they should not? |
-| B | Can a second tenant see or change the first tenant's work? |
-| C | Can platform staff operate the platform without reading customer projects? |
-| D | Does an unauthenticated caller see anything at all? |
-| E | Did anything a denial reported actually stay unchanged? |
+| Series | Question                                                                                  |
+| ------ | ----------------------------------------------------------------------------------------- |
+| A      | Can an ordinary user reach outside their organisation, or write anything they should not? |
+| B      | Can a second tenant see or change the first tenant's work?                                |
+| C      | Can platform staff operate the platform without reading customer projects?                |
+| D      | Does an unauthenticated caller see anything at all?                                       |
+| E      | Did anything a denial reported actually stay unchanged?                                   |
 
 ### The subtlety that matters
 

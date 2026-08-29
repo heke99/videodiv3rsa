@@ -139,7 +139,10 @@ export async function timelineRoutes(app: FastifyInstance): Promise<void> {
     await assertOwned("projects", id, caller);
 
     const body = z
-      .object({ document: z.record(z.string(), z.unknown()), expected_version: z.number().int().nonnegative() })
+      .object({
+        document: z.record(z.string(), z.unknown()),
+        expected_version: z.number().int().nonnegative(),
+      })
       .parse(request.body);
 
     return transaction(async (client) => {

@@ -75,8 +75,12 @@ describe("the golden suite", () => {
   it("weighs a case's focus dimensions above the rest", () => {
     // A model good at everything except the thing a case exists to test should
     // not score as though it passed that case.
-    const strongFocus = summarise("m", "1", [measurement("hands-detail", { hands: 1, anatomy: 0.5, interaction: 0.5 })]);
-    const weakFocus = summarise("m", "1", [measurement("hands-detail", { hands: 0.5, anatomy: 1, interaction: 1 })]);
+    const strongFocus = summarise("m", "1", [
+      measurement("hands-detail", { hands: 1, anatomy: 0.5, interaction: 0.5 }),
+    ]);
+    const weakFocus = summarise("m", "1", [
+      measurement("hands-detail", { hands: 0.5, anatomy: 1, interaction: 1 }),
+    ]);
     expect(strongFocus.overall).toBeGreaterThan(0);
     expect(weakFocus.overall).toBeGreaterThan(0);
     // hands is a focus dimension for this case and weighs double.
@@ -106,7 +110,9 @@ describe("regression against a baseline", () => {
 
     const verdict = compareToBaseline(candidate, baseline);
     expect(verdict.passed).toBe(false);
-    expect(verdict.regressions.some((r) => r.case_id === "hands-detail" && r.dimension === "hands")).toBe(true);
+    expect(verdict.regressions.some((r) => r.case_id === "hands-detail" && r.dimension === "hands")).toBe(
+      true,
+    );
   });
 
   it("blocks a large runtime increase", () => {
@@ -172,7 +178,9 @@ describe("promotion gates", () => {
   });
 
   it("refuses a version that scored below the bar", () => {
-    const weak = summarise("m", "1", [measurement("hands-detail", { hands: 0.3, anatomy: 0.3, interaction: 0.3 })]);
+    const weak = summarise("m", "1", [
+      measurement("hands-detail", { hands: 0.3, anatomy: 0.3, interaction: 0.3 }),
+    ]);
     expect(evaluatePromotion(promotion({ benchmark: weak })).allowed).toBe(false);
   });
 

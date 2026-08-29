@@ -37,7 +37,15 @@ function shot(id: string, index: number, overrides: Partial<Shot> = {}): Shot {
 function plan(shots: Shot[]): ShotPlan {
   return {
     schema_version: "1.0",
-    scenes: [{ id: "scene_01", index: 0, summary: "s", location_id: "location_01", shot_ids: shots.map((s) => s.id) }],
+    scenes: [
+      {
+        id: "scene_01",
+        index: 0,
+        summary: "s",
+        location_id: "location_01",
+        shot_ids: shots.map((s) => s.id),
+      },
+    ],
     shots,
     dependencies: deriveDependencies(shots),
   };
@@ -75,9 +83,18 @@ describe("dependency derivation", () => {
 describe("invalidation", () => {
   it("marks only the shots that use the changed character", () => {
     const p = plan([
-      shot("shot_01", 0, { character_ids: ["character_001"], start_frame_asset: { asset_id: "11111111-1111-4111-8111-111111111111" } }),
-      shot("shot_02", 1, { character_ids: ["character_002"], start_frame_asset: { asset_id: "22222222-2222-4222-8222-222222222222" } }),
-      shot("shot_03", 2, { character_ids: ["character_001"], start_frame_asset: { asset_id: "33333333-3333-4333-8333-333333333333" } }),
+      shot("shot_01", 0, {
+        character_ids: ["character_001"],
+        start_frame_asset: { asset_id: "11111111-1111-4111-8111-111111111111" },
+      }),
+      shot("shot_02", 1, {
+        character_ids: ["character_002"],
+        start_frame_asset: { asset_id: "22222222-2222-4222-8222-222222222222" },
+      }),
+      shot("shot_03", 2, {
+        character_ids: ["character_001"],
+        start_frame_asset: { asset_id: "33333333-3333-4333-8333-333333333333" },
+      }),
     ]);
     const [result] = invalidate(p, [{ kind: "character", ref: "character_001" }]);
     expect(result!.stale_shot_ids).toEqual(["shot_01", "shot_03"]);
@@ -112,7 +129,9 @@ describe("invalidation", () => {
     const shots = [shot("shot_01", 0, { character_ids: ["character_001"] }), shot("shot_02", 1)];
     const cyclic: ShotPlan = {
       schema_version: "1.0",
-      scenes: [{ id: "scene_01", index: 0, summary: "s", location_id: null, shot_ids: ["shot_01", "shot_02"] }],
+      scenes: [
+        { id: "scene_01", index: 0, summary: "s", location_id: null, shot_ids: ["shot_01", "shot_02"] },
+      ],
       shots,
       dependencies: [
         { shot_id: "shot_01", kind: "character", ref: "character_001" },
@@ -133,6 +152,6 @@ describe("plan validation", () => {
       shots: [shot("shot_01", 0)],
       dependencies: [{ shot_id: "shot_01", kind: "shot_end_frame", ref: "shot_missing" }],
     };
-    expect(validatePlanGraph(p)).toContain('Shot shot_01 reads a frame from unknown shot shot_missing');
+    expect(validatePlanGraph(p)).toContain("Shot shot_01 reads a frame from unknown shot shot_missing");
   });
 });

@@ -27,7 +27,10 @@ export function createGpuProvider(cfg: AppConfig = config(), env = process.env):
         apiBase: required(env, "GPU_PROVIDER_API_BASE"),
         apiKey: required(env, "GPU_PROVIDER_API_KEY"),
         imageRef: required(env, "GPU_WORKER_IMAGE"),
-        profileToInstanceType: JSON.parse(required(env, "GPU_PROFILE_INSTANCE_MAP")) as Record<string, string>,
+        profileToInstanceType: JSON.parse(required(env, "GPU_PROFILE_INSTANCE_MAP")) as Record<
+          string,
+          string
+        >,
       });
   }
 }

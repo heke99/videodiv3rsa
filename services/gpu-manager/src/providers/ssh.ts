@@ -57,7 +57,11 @@ export class GenericSshProvider implements GpuProvider {
 
   async getHealth(workerId: string): Promise<{ healthy: boolean; detail: string }> {
     try {
-      const { stdout } = await this.ssh(workerId, ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"]);
+      const { stdout } = await this.ssh(workerId, [
+        "nvidia-smi",
+        "--query-gpu=name",
+        "--format=csv,noheader",
+      ]);
       const gpus = stdout.trim().split("\n").filter(Boolean);
       return gpus.length > 0
         ? { healthy: true, detail: `${gpus.length} GPU(s) visible` }
@@ -86,7 +90,17 @@ export class GenericSshProvider implements GpuProvider {
     if (!row) throw new Error(`Worker ${workerId} is not registered with the ssh provider`);
     return exec(
       "ssh",
-      ["-i", this.opts.identityFile, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new", row.provider_ref, "--", ...argv],
+      [
+        "-i",
+        this.opts.identityFile,
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        "StrictHostKeyChecking=accept-new",
+        row.provider_ref,
+        "--",
+        ...argv,
+      ],
       { timeout: this.opts.commandTimeoutMs ?? 60_000 },
     );
   }

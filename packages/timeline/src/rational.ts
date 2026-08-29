@@ -74,22 +74,14 @@ function toSafeNumber(value: bigint, what: string): number {
 export function framesToTicks(frames: number, fps: Rational, mode: RoundingMode = "nearest"): number {
   assertInteger(frames, "frames");
   const f = normalizeRational(fps);
-  const ticks = divide(
-    BigInt(frames) * MASTER_TICKS_PER_SECOND * BigInt(f.den),
-    BigInt(f.num),
-    mode,
-  );
+  const ticks = divide(BigInt(frames) * MASTER_TICKS_PER_SECOND * BigInt(f.den), BigInt(f.num), mode);
   return toSafeNumber(ticks, "ticks");
 }
 
 export function ticksToFrames(ticks: number, fps: Rational, mode: RoundingMode = "nearest"): number {
   assertInteger(ticks, "ticks");
   const f = normalizeRational(fps);
-  const frames = divide(
-    BigInt(ticks) * BigInt(f.num),
-    MASTER_TICKS_PER_SECOND * BigInt(f.den),
-    mode,
-  );
+  const frames = divide(BigInt(ticks) * BigInt(f.num), MASTER_TICKS_PER_SECOND * BigInt(f.den), mode);
   return toSafeNumber(frames, "frames");
 }
 

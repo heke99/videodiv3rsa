@@ -10,7 +10,11 @@ export default function QualityPage() {
   const [data, setData] = useState<Awaited<ReturnType<typeof adminApi.quality>> | null>(null);
 
   useEffect(() => {
-    if (session) adminApi.quality(session).then(setData).catch(() => setData(null));
+    if (session)
+      adminApi
+        .quality(session)
+        .then(setData)
+        .catch(() => setData(null));
   }, [session]);
 
   if (!session) return <div className="page muted">Sign in as platform staff.</div>;
@@ -45,7 +49,11 @@ export default function QualityPage() {
       <div className="card stack" style={{ gap: "0.4rem" }}>
         <strong>Most common findings</strong>
         {data.failure_reasons.map((row) => (
-          <div key={`${row.code}-${row.severity}`} className="row" style={{ justifyContent: "space-between" }}>
+          <div
+            key={`${row.code}-${row.severity}`}
+            className="row"
+            style={{ justifyContent: "space-between" }}
+          >
             <span className="row" style={{ gap: "0.5rem" }}>
               <span>{row.code.replace(/_/g, " ")}</span>
               <span className="badge">{row.severity}</span>

@@ -28,11 +28,7 @@ export const FrameRate = z.object({
 });
 export type FrameRate = z.infer<typeof FrameRate>;
 
-export const SampleRate = z.union([
-  z.literal(44100),
-  z.literal(48000),
-  z.literal(96000),
-]);
+export const SampleRate = z.union([z.literal(44100), z.literal(48000), z.literal(96000)]);
 
 export const Timebase = z.object({
   frame_rate: FrameRate,
@@ -98,15 +94,7 @@ export const QualityMode = z.enum([
 ]);
 export type QualityMode = z.infer<typeof QualityMode>;
 
-export const Platform = z.enum([
-  "tiktok",
-  "reels",
-  "shorts",
-  "youtube",
-  "web",
-  "broadcast",
-  "other",
-]);
+export const Platform = z.enum(["tiktok", "reels", "shorts", "youtube", "web", "broadcast", "other"]);
 
 export const Precision = z.enum(["fp32", "bf16", "fp16", "fp8"]);
 export type Precision = z.infer<typeof Precision>;

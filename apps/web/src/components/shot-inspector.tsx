@@ -14,7 +14,13 @@ import { framesToSecondsLabel } from "@/lib/format";
 
 interface ShotDetail {
   shot: ShotSummary;
-  versions: Array<{ version: number; asset_id: string | null; created_at: string; overall: number | null; passed: boolean | null }>;
+  versions: Array<{
+    version: number;
+    asset_id: string | null;
+    created_at: string;
+    overall: number | null;
+    passed: boolean | null;
+  }>;
   evaluation: {
     id: string;
     overall: number;
@@ -90,7 +96,12 @@ export function ShotInspector({
     }
   }
 
-  if (error) return <div className="card" style={{ color: "var(--danger)" }}>{error}</div>;
+  if (error)
+    return (
+      <div className="card" style={{ color: "var(--danger)" }}>
+        {error}
+      </div>
+    );
   if (!detail) return <div className="card muted">Loading shot…</div>;
 
   const { shot, versions, evaluation } = detail;
@@ -107,7 +118,12 @@ export function ShotInspector({
       ) : (
         <div
           className="muted"
-          style={{ background: "var(--surface-raised)", borderRadius: 6, padding: "2rem", textAlign: "center" }}
+          style={{
+            background: "var(--surface-raised)",
+            borderRadius: 6,
+            padding: "2rem",
+            textAlign: "center",
+          }}
         >
           Not generated yet
         </div>

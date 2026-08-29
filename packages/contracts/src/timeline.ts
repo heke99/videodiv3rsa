@@ -8,24 +8,10 @@ import { AssetRef, SchemaVersion, Slug, Timebase, Uuid } from "./primitives.js";
  */
 export const TIMELINE_SCHEMA_VERSION = "1.0";
 
-export const TrackKind = z.enum([
-  "VIDEO",
-  "DIALOGUE",
-  "MUSIC",
-  "SFX",
-  "AMBIENCE",
-  "ROOM_TONE",
-  "CAPTIONS",
-]);
+export const TrackKind = z.enum(["VIDEO", "DIALOGUE", "MUSIC", "SFX", "AMBIENCE", "ROOM_TONE", "CAPTIONS"]);
 export type TrackKind = z.infer<typeof TrackKind>;
 
-export const AUDIO_TRACK_KINDS: TrackKind[] = [
-  "DIALOGUE",
-  "MUSIC",
-  "SFX",
-  "AMBIENCE",
-  "ROOM_TONE",
-];
+export const AUDIO_TRACK_KINDS: TrackKind[] = ["DIALOGUE", "MUSIC", "SFX", "AMBIENCE", "ROOM_TONE"];
 
 export const VideoEvent = z.object({
   id: Slug,
@@ -71,11 +57,7 @@ export const CaptionEvent = z.object({
 });
 export type CaptionEvent = z.infer<typeof CaptionEvent>;
 
-export const TimelineEvent = z.discriminatedUnion("kind", [
-  VideoEvent,
-  AudioEvent,
-  CaptionEvent,
-]);
+export const TimelineEvent = z.discriminatedUnion("kind", [VideoEvent, AudioEvent, CaptionEvent]);
 export type TimelineEvent = z.infer<typeof TimelineEvent>;
 
 export const TimelineTrack = z.object({

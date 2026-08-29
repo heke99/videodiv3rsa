@@ -124,7 +124,10 @@ export class Planner {
       user: [
         `Brief:\n${JSON.stringify(brief, null, 2)}`,
         `Characters and voices:\n${JSON.stringify(
-          { characters: bible.characters.map((c) => ({ id: c.id, voice_id: c.voice_id })), voices: bible.voices },
+          {
+            characters: bible.characters.map((c) => ({ id: c.id, voice_id: c.voice_id })),
+            voices: bible.voices,
+          },
           null,
           2,
         )}`,
@@ -141,13 +144,18 @@ export class Planner {
     const plan = await this.director.plan({
       output: "shot_plan",
       schema: ShotPlan,
-      system: await systemFor(SHOT_PLAN_SYSTEM, "shot_plan", {
-        quality_mode: brief.quality_mode,
-        has_dialogue: script.dialogue.length > 0 || script.narration.length > 0,
-        has_humans: bible.characters.length > 0,
-        has_product: bible.products.length > 0,
-        requires_identity_lock: bible.characters.length > 0,
-      }, ctx),
+      system: await systemFor(
+        SHOT_PLAN_SYSTEM,
+        "shot_plan",
+        {
+          quality_mode: brief.quality_mode,
+          has_dialogue: script.dialogue.length > 0 || script.narration.length > 0,
+          has_humans: bible.characters.length > 0,
+          has_product: bible.products.length > 0,
+          requires_identity_lock: bible.characters.length > 0,
+        },
+        ctx,
+      ),
       capabilities: ctx.capabilities,
       user: [
         `Brief:\n${JSON.stringify(brief, null, 2)}`,
@@ -160,22 +168,23 @@ export class Planner {
     return finalisePlan(plan, brief);
   }
 
-  async repairPlan(
-    evaluation: QualityEvaluation,
-    shot: Shot,
-    ctx: PlanningContext,
-  ): Promise<RepairPlan> {
+  async repairPlan(evaluation: QualityEvaluation, shot: Shot, ctx: PlanningContext): Promise<RepairPlan> {
     return this.director.plan({
       output: "repair_plan",
       schema: RepairPlan,
-      system: await systemFor(REPAIR_SYSTEM, "repair_plan", {
-        quality_mode: evaluation.quality_profile,
-        generation_kind: shot.preferred_generation_kind,
-        has_dialogue: shot.dialogue_line_ids.length > 0,
-        has_humans: shot.character_ids.length > 0,
-        has_product: shot.product_ids.length > 0,
-        requires_identity_lock: shot.requires_identity_lock,
-      }, ctx),
+      system: await systemFor(
+        REPAIR_SYSTEM,
+        "repair_plan",
+        {
+          quality_mode: evaluation.quality_profile,
+          generation_kind: shot.preferred_generation_kind,
+          has_dialogue: shot.dialogue_line_ids.length > 0,
+          has_humans: shot.character_ids.length > 0,
+          has_product: shot.product_ids.length > 0,
+          requires_identity_lock: shot.requires_identity_lock,
+        },
+        ctx,
+      ),
       capabilities: ctx.capabilities,
       temperature: 0.2,
       user: [
@@ -200,8 +209,7 @@ export function finalisePlan(plan: ShotPlan, brief: CreativeBrief): ShotPlan {
   }
 
   const shots = reconcileDurations(plan.shots, brief.target_duration_frames);
-  const dependencies =
-    plan.dependencies.length > 0 ? plan.dependencies : deriveDependencies(shots);
+  const dependencies = plan.dependencies.length > 0 ? plan.dependencies : deriveDependencies(shots);
 
   return { ...plan, shots, dependencies };
 }

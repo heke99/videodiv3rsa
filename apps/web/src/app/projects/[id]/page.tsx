@@ -80,13 +80,16 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   }, [session, job, running, load]);
 
   if (!session) return <div className="page muted">Sign in to open this project.</div>;
-  if (error) return <div className="page" style={{ color: "var(--danger)" }}>{error}</div>;
+  if (error)
+    return (
+      <div className="page" style={{ color: "var(--danger)" }}>
+        {error}
+      </div>
+    );
   if (!project) return <div className="page muted">Loading…</div>;
 
   const live = job?.live;
-  const shotsNeedingReview = project.shots
-    .filter((s) => s.status === "needs_review")
-    .map((s) => s.slug);
+  const shotsNeedingReview = project.shots.filter((s) => s.status === "needs_review").map((s) => s.slug);
 
   return (
     <div className="page stack">
@@ -101,9 +104,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <span className="badge">{project.project.aspect_ratio}</span>
           </div>
         </div>
-        {running && job && (
-          <button onClick={() => api.cancelJob(job.id, session).then(load)}>Stop</button>
-        )}
+        {running && job && <button onClick={() => api.cancelJob(job.id, session).then(load)}>Stop</button>}
       </div>
 
       {job && (

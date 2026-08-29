@@ -93,12 +93,7 @@ export function assembleTimeline(input: AssembleInput): AssembleResult {
   // Dialogue is placed against the shot it belongs to rather than laid end to
   // end, so a line stays with its picture even when neighbouring shots change.
   const shotStarts = frameOffsets(shots);
-  const { events: dialogueEvents, offsets } = placeDialogue(
-    dialogue,
-    shotStarts,
-    fps,
-    sampleRate,
-  );
+  const { events: dialogueEvents, offsets } = placeDialogue(dialogue, shotStarts, fps, sampleRate);
 
   const captionEvents: CaptionEvent[] = captionsFromAlignment(
     "captions",
@@ -256,18 +251,12 @@ export const DUCKING = {
  * the music dipped, and the result is identical on every render rather than
  * depending on a detector's behaviour.
  */
-export function applyDucking(
-  beds: AudioEvent[],
-  dialogue: AudioEvent[],
-  sampleRate: number,
-): AudioEvent[] {
+export function applyDucking(beds: AudioEvent[], dialogue: AudioEvent[], sampleRate: number): AudioEvent[] {
   if (dialogue.length === 0) return beds;
 
   const attack = Math.round((DUCKING.attack_ms * sampleRate) / 1000);
   const release = Math.round((DUCKING.release_ms * sampleRate) / 1000);
-  const speech = mergeSpans(
-    dialogue.map((d) => ({ start: d.start_sample, end: d.end_sample })),
-  );
+  const speech = mergeSpans(dialogue.map((d) => ({ start: d.start_sample, end: d.end_sample })));
 
   return beds.flatMap((bed) => {
     if (bed.ducking_group !== "music") return [bed];

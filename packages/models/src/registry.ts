@@ -1,10 +1,5 @@
 import { query, toNumber } from "@videoai/database";
-import type {
-  CapabilitySnapshot,
-  GpuProfile,
-  Precision,
-  RoutingRule,
-} from "@videoai/contracts";
+import type { CapabilitySnapshot, GpuProfile, Precision, RoutingRule } from "@videoai/contracts";
 import type { RoutableModel } from "./router.js";
 
 /**
@@ -83,9 +78,7 @@ export async function loadRoutingRules(): Promise<RoutingRule[]> {
     match: RoutingRule["match"];
     target: RoutingRule["target"];
     reason: string;
-  }>(
-    "select id, priority, enabled, match, target, reason from public.routing_rules order by priority desc",
-  );
+  }>("select id, priority, enabled, match, target, reason from public.routing_rules order by priority desc");
   return rows.map((r) => ({
     id: r.id,
     priority: r.priority,
@@ -101,9 +94,7 @@ export async function loadRoutingRules(): Promise<RoutingRule[]> {
  * pass the gate appear here, which is what stops the Director from planning
  * around something it may not use.
  */
-export async function buildCapabilitySnapshot(
-  availableProfiles: GpuProfile[],
-): Promise<CapabilitySnapshot> {
+export async function buildCapabilitySnapshot(availableProfiles: GpuProfile[]): Promise<CapabilitySnapshot> {
   const models = await loadRoutableModels();
   const routable = models.filter(
     (m) =>
@@ -116,9 +107,7 @@ export async function buildCapabilitySnapshot(
     `select sr.skill_id, coalesce(sr.current_version, '0.0') as version
      from public.skill_registry sr where sr.status = 'active'`,
   );
-  const voices = await query<{ slug: string }>(
-    "select distinct slug from public.voice_profiles",
-  );
+  const voices = await query<{ slug: string }>("select distinct slug from public.voice_profiles");
 
   return {
     schema_version: "1.0",

@@ -30,9 +30,15 @@ export const QUALITY_PROFILES: Record<QualityMode, QualityThresholds> = {
     profile: "REALISTIC",
     overall: 0.8,
     dimensions: {
-      flicker: 0.75, temporal_consistency: 0.75, motion: 0.6,
-      identity: 0.85, face: 0.8, hands: 0.75, physics: 0.75,
-      audio_quality: 0.75, av_sync: 0.8,
+      flicker: 0.75,
+      temporal_consistency: 0.75,
+      motion: 0.6,
+      identity: 0.85,
+      face: 0.8,
+      hands: 0.75,
+      physics: 0.75,
+      audio_quality: 0.75,
+      av_sync: 0.8,
     },
   },
   UGC: {
@@ -41,25 +47,41 @@ export const QUALITY_PROFILES: Record<QualityMode, QualityThresholds> = {
     dimensions: {
       // UGC tolerates loose framing and uneven light, and does not relax any
       // of the correctness dimensions (spec section 30).
-      identity: 0.85, lip_sync: 0.85, hands: 0.75, product: 0.85,
-      flicker: 0.6, av_sync: 0.8, audio_quality: 0.7, safe_area: 0.9,
+      identity: 0.85,
+      lip_sync: 0.85,
+      hands: 0.75,
+      product: 0.85,
+      flicker: 0.6,
+      av_sync: 0.8,
+      audio_quality: 0.7,
+      safe_area: 0.9,
     },
   },
   CINEMATIC: {
     profile: "CINEMATIC",
     overall: 0.82,
     dimensions: {
-      flicker: 0.8, temporal_consistency: 0.8, motion: 0.7,
-      camera: 0.75, lighting: 0.75, color: 0.75, framing: 0.7,
-      audio_quality: 0.8, av_sync: 0.8,
+      flicker: 0.8,
+      temporal_consistency: 0.8,
+      motion: 0.7,
+      camera: 0.75,
+      lighting: 0.75,
+      color: 0.75,
+      framing: 0.7,
+      audio_quality: 0.8,
+      av_sync: 0.8,
     },
   },
   PRODUCT: {
     profile: "PRODUCT",
     overall: 0.85,
     dimensions: {
-      product: 0.9, logo: 0.9, text_preservation: 0.9,
-      flicker: 0.75, temporal_consistency: 0.8, interaction: 0.8,
+      product: 0.9,
+      logo: 0.9,
+      text_preservation: 0.9,
+      flicker: 0.75,
+      temporal_consistency: 0.8,
+      interaction: 0.8,
     },
   },
   AVATAR: {
@@ -71,9 +93,15 @@ export const QUALITY_PROFILES: Record<QualityMode, QualityThresholds> = {
     profile: "ULTRA",
     overall: 0.88,
     dimensions: {
-      flicker: 0.85, temporal_consistency: 0.85, motion: 0.75,
-      identity: 0.9, face: 0.85, hands: 0.8, physics: 0.8,
-      audio_quality: 0.85, av_sync: 0.85,
+      flicker: 0.85,
+      temporal_consistency: 0.85,
+      motion: 0.75,
+      identity: 0.9,
+      face: 0.85,
+      hands: 0.8,
+      physics: 0.8,
+      audio_quality: 0.85,
+      av_sync: 0.85,
     },
   },
 };
@@ -158,7 +186,8 @@ export function aggregate(
     // Where two judges cover one dimension, keep the lower score: a dimension
     // is only as good as its worst evidence.
     const existing = scores[judge.dimension];
-    scores[judge.dimension] = existing === undefined ? judgeResult.score : Math.min(existing, judgeResult.score);
+    scores[judge.dimension] =
+      existing === undefined ? judgeResult.score : Math.min(existing, judgeResult.score);
 
     weighted += judgeResult.score * judgeResult.confidence;
     weight += judgeResult.confidence;

@@ -101,9 +101,7 @@ interface RawStream {
 export async function probe(path: string): Promise<ProbeResult> {
   let parsed: { streams?: RawStream[]; format?: { duration?: string; bit_rate?: string } };
   try {
-    parsed = JSON.parse(
-      await ffprobe(["-v", "error", "-show_streams", "-show_format", "-of", "json", path]),
-    );
+    parsed = JSON.parse(await ffprobe(["-v", "error", "-show_streams", "-show_format", "-of", "json", path]));
   } catch {
     return emptyProbe();
   }
@@ -163,11 +161,15 @@ export function parseRational(value: string | undefined): { num: number; den: nu
 export async function countFrames(path: string): Promise<number | null> {
   try {
     const out = await ffprobe([
-      "-v", "error",
-      "-select_streams", "v:0",
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
       "-count_frames",
-      "-show_entries", "stream=nb_read_frames",
-      "-of", "default=nokey=1:noprint_wrappers=1",
+      "-show_entries",
+      "stream=nb_read_frames",
+      "-of",
+      "default=nokey=1:noprint_wrappers=1",
       path,
     ]);
     const n = Number(out.trim());

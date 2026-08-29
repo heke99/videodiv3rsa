@@ -155,9 +155,7 @@ export const motionJudge: Judge = {
 
     const findings: Finding[] = [];
     if (frozen > 0.25) {
-      findings.push(
-        finding("frozen_segment", "high", `${Math.round(frozen * 100)}% of the shot is frozen`),
-      );
+      findings.push(finding("frozen_segment", "high", `${Math.round(frozen * 100)}% of the shot is frozen`));
     }
     // A shot planned to move that did not is a real generation failure, and
     // technically valid output makes it easy to miss.
@@ -171,9 +169,7 @@ export const motionJudge: Judge = {
       );
     }
     if (planned < 0.3 && measured > 0.7) {
-      findings.push(
-        finding("excess_motion", "medium", "Movement far exceeds what the shot called for"),
-      );
+      findings.push(finding("excess_motion", "medium", "Movement far exceeds what the shot called for"));
     }
 
     const score = 1 - Math.min(1, Math.abs(measured - planned)) * 0.5 - frozen * 0.5;
@@ -197,7 +193,8 @@ export const audioQualityJudge: Judge = {
       return result(audioQualityJudge, ctx.expects_audio ? 0 : 1, findings, {}, "audio");
     }
 
-    const profile = ctx.loudness_profile && ctx.loudness_profile !== "custom" ? ctx.loudness_profile : "social";
+    const profile =
+      ctx.loudness_profile && ctx.loudness_profile !== "custom" ? ctx.loudness_profile : "social";
     const target = LOUDNESS_TARGETS[profile];
     const drift = Math.abs(measured.integrated_lufs - target.integrated_lufs);
 
@@ -231,7 +228,11 @@ export const audioQualityJudge: Judge = {
       audioQualityJudge,
       Math.max(0, 1 - drift / 6),
       findings,
-      { integrated_lufs: measured.integrated_lufs, true_peak_dbtp: measured.true_peak_dbtp, lra: measured.lra },
+      {
+        integrated_lufs: measured.integrated_lufs,
+        true_peak_dbtp: measured.true_peak_dbtp,
+        lra: measured.lra,
+      },
       "audio",
     );
   },
@@ -249,7 +250,13 @@ export const avSyncJudge: Judge = {
 
     const measured = await firstSoundSample(ctx.asset_path, ctx.audio_sample_rate);
     if (measured === null) {
-      return result(avSyncJudge, 0, [finding("no_audio", "critical", "No audio to synchronise")], {}, "audio");
+      return result(
+        avSyncJudge,
+        0,
+        [finding("no_audio", "critical", "No audio to synchronise")],
+        {},
+        "audio",
+      );
     }
 
     const offsetSamples = measured - ctx.expected_first_sound_sample;

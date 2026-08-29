@@ -122,10 +122,10 @@ export async function createAsset(
         [input.generation_attempt_id, input.organization_id, id, digest],
       );
       if (input.provenance) {
-        await client.query(
-          "update public.generation_attempts set provenance = $2 where id = $1",
-          [input.generation_attempt_id, input.provenance],
-        );
+        await client.query("update public.generation_attempts set provenance = $2 where id = $1", [
+          input.generation_attempt_id,
+          input.provenance,
+        ]);
       }
     }
 

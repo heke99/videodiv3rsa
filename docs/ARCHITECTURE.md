@@ -115,20 +115,20 @@ and expired envelopes, and need no outbound internet access after provisioning.
 
 ## Package boundaries
 
-| Package | Responsibility |
-|---|---|
-| `contracts` | Zod schemas; the single source of truth for every shape |
-| `config` | environment parsing, no defaults for anything identifying |
-| `timeline` | rational timebase maths and timeline assembly |
-| `database` | pooled service access and RLS-enforcing user access |
-| `storage` | `StorageAdapter` over Supabase, S3 or local disk |
-| `models` | registry reads, licence gate, router |
-| `scene-bible` | dependency graph and invalidation |
-| `gpu-manager` | providers, scheduler, reservations, signed gateway |
-| `director` | Director adapter, planning pipeline, preflight |
-| `orchestrator` | Temporal workflows, activities, retry budgets |
-| `render` | ffmpeg composition, captions, technical QC |
-| `api` | the only surface a browser talks to |
+| Package        | Responsibility                                            |
+| -------------- | --------------------------------------------------------- |
+| `contracts`    | Zod schemas; the single source of truth for every shape   |
+| `config`       | environment parsing, no defaults for anything identifying |
+| `timeline`     | rational timebase maths and timeline assembly             |
+| `database`     | pooled service access and RLS-enforcing user access       |
+| `storage`      | `StorageAdapter` over Supabase, S3 or local disk          |
+| `models`       | registry reads, licence gate, router                      |
+| `scene-bible`  | dependency graph and invalidation                         |
+| `gpu-manager`  | providers, scheduler, reservations, signed gateway        |
+| `director`     | Director adapter, planning pipeline, preflight            |
+| `orchestrator` | Temporal workflows, activities, retry budgets             |
+| `render`       | ffmpeg composition, captions, technical QC                |
+| `api`          | the only surface a browser talks to                       |
 
 Python runtimes share one contract in `workers/_sdk`, so a new model family is a
 new container rather than a new integration.

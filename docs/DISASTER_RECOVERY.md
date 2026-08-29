@@ -96,14 +96,14 @@ If the store is lost:
 
 ## Backup coverage
 
-| What | Why it matters | Frequency |
-|---|---|---|
-| Postgres | everything above depends on it | continuous plus daily snapshot |
-| Object metadata | maps storage keys to meaning | with the database |
-| Model registry and licences | which models are cleared for use | with the database |
-| Skill registry | which skill versions are active | with the database |
-| Configuration and secrets | in the secret manager, not in backups | on change |
-| Generated assets | regenerable but expensive | per retention policy |
+| What                        | Why it matters                        | Frequency                      |
+| --------------------------- | ------------------------------------- | ------------------------------ |
+| Postgres                    | everything above depends on it        | continuous plus daily snapshot |
+| Object metadata             | maps storage keys to meaning          | with the database              |
+| Model registry and licences | which models are cleared for use      | with the database              |
+| Skill registry              | which skill versions are active       | with the database              |
+| Configuration and secrets   | in the secret manager, not in backups | on change                      |
+| Generated assets            | regenerable but expensive             | per retention policy           |
 
 Generated assets get their own policy because they are the largest and the least
 irreplaceable: they can be regenerated from the plan, at GPU cost. Everything

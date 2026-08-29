@@ -30,9 +30,16 @@ export async function record(event: UsageEvent): Promise<void> {
         kind, gpu_seconds, cost_units)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id`,
     [
-      event.organization_id, event.user_id ?? null, event.project_id ?? null,
-      event.job_id ?? null, event.shot_id ?? null, event.worker_id ?? null,
-      event.model_id ?? null, event.kind, event.gpu_seconds, event.cost_units,
+      event.organization_id,
+      event.user_id ?? null,
+      event.project_id ?? null,
+      event.job_id ?? null,
+      event.shot_id ?? null,
+      event.worker_id ?? null,
+      event.model_id ?? null,
+      event.kind,
+      event.gpu_seconds,
+      event.cost_units,
     ],
   );
 }
@@ -96,8 +103,13 @@ export async function rollup(
          on conflict (organization_id, period_start, granularity, dimension, dimension_value)
          do update set gpu_seconds = excluded.gpu_seconds, cost_units = excluded.cost_units`,
         [
-          organizationId, periodStart, granularity, dimension,
-          row.dimension_value, Number(row.gpu_seconds), Number(row.cost_units),
+          organizationId,
+          periodStart,
+          granularity,
+          dimension,
+          row.dimension_value,
+          Number(row.gpu_seconds),
+          Number(row.cost_units),
         ],
       );
     }

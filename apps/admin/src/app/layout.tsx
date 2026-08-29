@@ -21,7 +21,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <body>
         <header style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
           <div className="page" style={{ padding: "0.85rem 1.25rem" }}>
-            <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}>
+            <div
+              className="row"
+              style={{ justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}
+            >
               <strong>{appName} operations</strong>
               <nav className="row" style={{ gap: "0.9rem", flexWrap: "wrap" }}>
                 {TABS.map((tab) => (

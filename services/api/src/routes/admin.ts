@@ -161,8 +161,15 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       .object({
         version: z.string().min(1),
         lifecycle: z.enum([
-          "candidate", "testing", "benchmarking", "approved", "canary",
-          "production", "deprecated", "license_blocked", "disabled",
+          "candidate",
+          "testing",
+          "benchmarking",
+          "approved",
+          "canary",
+          "production",
+          "deprecated",
+          "license_blocked",
+          "disabled",
         ]),
         canary_weight: z.number().min(0).max(1).default(0),
       })

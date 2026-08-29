@@ -149,7 +149,10 @@ export class MemoryExporter implements Exporter {
 
   /** Percentile latency for one span name, which is what an operator asks for. */
   percentile(name: string, p: number): number {
-    const durations = this.spans.filter((s) => s.name === name).map((s) => s.duration_ms).sort((a, b) => a - b);
+    const durations = this.spans
+      .filter((s) => s.name === name)
+      .map((s) => s.duration_ms)
+      .sort((a, b) => a - b);
     if (durations.length === 0) return 0;
     const index = Math.min(durations.length - 1, Math.floor((p / 100) * durations.length));
     return durations[index]!;

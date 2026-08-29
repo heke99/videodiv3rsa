@@ -20,9 +20,9 @@ type EntityKind = keyof typeof ENTITY_TABLES;
 export async function libraryRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/library/:kind", async (request) => {
     const caller = await authenticate(request);
-    const { kind } = z.object({ kind: z.enum(["characters", "products", "locations", "voices"]) }).parse(
-      request.params,
-    );
+    const { kind } = z
+      .object({ kind: z.enum(["characters", "products", "locations", "voices"]) })
+      .parse(request.params);
     const { project_id } = z.object({ project_id: z.string().uuid().optional() }).parse(request.query);
 
     const table = ENTITY_TABLES[kind];
@@ -61,10 +61,10 @@ export async function libraryRoutes(app: FastifyInstance): Promise<void> {
       .parse(request.params);
 
     const table = ENTITY_TABLES[kind as EntityKind];
-    const entity = await queryOne(
-      `select * from public.${table} where id = $1 and organization_id = $2`,
-      [id, caller.organization_id],
-    );
+    const entity = await queryOne(`select * from public.${table} where id = $1 and organization_id = $2`, [
+      id,
+      caller.organization_id,
+    ]);
     if (!entity) {
       throw notFound();
     }

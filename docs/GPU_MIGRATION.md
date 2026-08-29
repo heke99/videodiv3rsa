@@ -24,12 +24,12 @@ described by capability, so a different card is a different row.
 
 Product logic never asks for a card by name. It asks for a profile:
 
-| Profile | VRAM | What it can serve |
-|---|---|---|
-| `GPU_PROFILE_ECONOMY` | 24 GB | TTS, MMAudio, MuseTalk, alignment |
-| `GPU_PROFILE_STANDARD` | 48 GB | image generation, smaller video models |
-| `GPU_PROFILE_HIGH` | 80 GB | Wan S2V and Animate |
-| `GPU_PROFILE_ULTRA` | 96 GB | the full Wan A14B family, our production target |
+| Profile                | VRAM  | What it can serve                               |
+| ---------------------- | ----- | ----------------------------------------------- |
+| `GPU_PROFILE_ECONOMY`  | 24 GB | TTS, MMAudio, MuseTalk, alignment               |
+| `GPU_PROFILE_STANDARD` | 48 GB | image generation, smaller video models          |
+| `GPU_PROFILE_HIGH`     | 80 GB | Wan S2V and Animate                             |
+| `GPU_PROFILE_ULTRA`    | 96 GB | the full Wan A14B family, our production target |
 
 The supervisor classifies the host automatically and rounds **down**: a 70 GB
 card registers as STANDARD, not HIGH, because advertising capacity the card does

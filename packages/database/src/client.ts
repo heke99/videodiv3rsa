@@ -30,10 +30,7 @@ export async function closeDb(): Promise<void> {
   pool = null;
 }
 
-export async function query<T extends QueryResultRow>(
-  sql: string,
-  params: unknown[] = [],
-): Promise<T[]> {
+export async function query<T extends QueryResultRow>(sql: string, params: unknown[] = []): Promise<T[]> {
   const result = await db().query<T>(sql, params);
   return result.rows;
 }

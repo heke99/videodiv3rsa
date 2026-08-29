@@ -53,9 +53,7 @@ const BANNED_PACKAGES = [
   "@anthropic-ai/sdk",
 ];
 
-const SKIP_DIRS = new Set([
-  "node_modules", ".git", ".next", "dist", ".turbo", "coverage", "models",
-]);
+const SKIP_DIRS = new Set(["node_modules", ".git", ".next", "dist", ".turbo", "coverage", "models"]);
 
 /** This file names the banned things, so it must exempt itself. */
 const SELF = path.join(ROOT, "tests/security/no-external-ai.spec.ts");
@@ -75,9 +73,7 @@ const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".mjs", ".py", ".json", ".yaml"
 
 describe("no external AI generation providers", () => {
   it("has zero external generation hosts in source or lockfiles", async () => {
-    const files = (await walk(ROOT)).filter(
-      (f) => f !== SELF && SOURCE_EXTENSIONS.includes(path.extname(f)),
-    );
+    const files = (await walk(ROOT)).filter((f) => f !== SELF && SOURCE_EXTENSIONS.includes(path.extname(f)));
     const hits: string[] = [];
 
     for (const file of files) {
@@ -117,7 +113,10 @@ describe("no external AI generation providers", () => {
 
     for (const file of files) {
       for (const line of (await readFile(file, "utf8")).split("\n")) {
-        const name = line.trim().split(/[=<>!~ ;#]/)[0]?.toLowerCase();
+        const name = line
+          .trim()
+          .split(/[=<>!~ ;#]/)[0]
+          ?.toLowerCase();
         if (name && BANNED_PACKAGES.includes(name)) {
           hits.push(`${path.relative(ROOT, file)}: ${name}`);
         }

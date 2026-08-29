@@ -1,13 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  MemoryExporter,
-  METRICS,
-  SPANS,
-  metric,
-  setExporter,
-  startSpan,
-  traced,
-} from "@videoai/telemetry";
+import { MemoryExporter, METRICS, SPANS, metric, setExporter, startSpan, traced } from "@videoai/telemetry";
 import { costUnits } from "@videoai/usage";
 
 /**
