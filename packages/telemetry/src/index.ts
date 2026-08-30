@@ -164,3 +164,53 @@ export class MemoryExporter implements Exporter {
     return matching.filter((s) => s.error).length / matching.length;
   }
 }
+
+/**
+ * Structured lines on stdout, one JSON object per span or metric.
+ *
+ * The portable choice: every log pipeline can read it, and nothing about the
+ * deployment target is baked in. A collector, if there is one, tails the
+ * process; there is no endpoint in the code to point somewhere else later.
+ */
+export class JsonExporter implements Exporter {
+  constructor(private readonly write: (line: string) => void = (line) => process.stdout.write(line)) {}
+
+  span(record: SpanRecord): void {
+    this.emit({ kind: "span", ...record });
+  }
+
+  metric(record: MetricRecord): void {
+    this.emit({ kind: "metric", ...record });
+  }
+
+  private emit(payload: object): void {
+    // Telemetry must never be the reason a request fails. A span that cannot be
+    // serialised is a lost span, not a lost job.
+    try {
+      this.write(`${JSON.stringify(payload)}\n`);
+    } catch {
+      // Nothing useful to do here; raising would defeat the point.
+    }
+  }
+}
+
+/**
+ * Attach the exporter a process should use, once, at startup.
+ *
+ * `OTEL_EXPORTER_OTLP_ENDPOINT` is accepted by the config schema but no OTLP
+ * transport is implemented, so it is reported rather than silently ignored --
+ * an operator who sets it deserves to know their spans are still going to
+ * stdout instead of discovering it when a dashboard stays empty.
+ */
+export function configureTelemetry(options: {
+  otlpEndpoint?: string | undefined;
+  warn?: (message: string) => void;
+}): void {
+  if (options.otlpEndpoint) {
+    (options.warn ?? console.warn)(
+      `OTEL_EXPORTER_OTLP_ENDPOINT is set to ${options.otlpEndpoint}, but OTLP shipping is not ` +
+        `implemented. Spans and metrics are written to stdout as JSON; collect them from there.`,
+    );
+  }
+  setExporter(new JsonExporter());
+}

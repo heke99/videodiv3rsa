@@ -21,6 +21,7 @@
     "@videoai/contracts": "workspace:*",
     "@videoai/database": "workspace:*",
     "@videoai/orchestrator": "workspace:*",
+    "@videoai/quality": "workspace:*",
     "@videoai/storage": "workspace:*",
     "@videoai/timeline": "workspace:*",
     "@videoai/usage": "workspace:*",

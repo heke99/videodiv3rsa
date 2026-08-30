@@ -25,7 +25,11 @@ interface ShotDetail {
     id: string;
     overall: number;
     passed: boolean;
+    /** Fraction of this mode's gating checks that could be run. Null if unknown. */
+    coverage: number | null;
     metrics: Array<{ dimension: string; score: number; threshold: number | null; passed: boolean }>;
+    /** Gating checks that could not run, by name. */
+    unmeasured: string[];
   } | null;
 }
 
@@ -144,6 +148,16 @@ export function ShotInspector({
               {Math.round(evaluation.overall * 100)}
             </span>
           </div>
+          {evaluation.unmeasured.length > 0 && (
+            // A score with half the checks missing is not the same claim as a
+            // score, and the difference is exactly the one a user would want to
+            // know about. Said in the open rather than left to the badge.
+            <p className="muted" style={{ fontSize: "0.8rem", margin: 0 }}>
+              {evaluation.passed ? "Passed the checks we can run." : "Scored on the checks we can run."}{" "}
+              {evaluation.unmeasured.length === 1 ? "One check" : `${evaluation.unmeasured.length} checks`}{" "}
+              could not run: {evaluation.unmeasured.map((d) => d.replace(/_/g, " ")).join(", ")}.
+            </p>
+          )}
           {evaluation.metrics
             .filter((m) => m.threshold !== null)
             .map((metric) => (

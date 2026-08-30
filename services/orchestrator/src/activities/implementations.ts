@@ -15,6 +15,7 @@ import { buildCapabilitySnapshot, loadRoutableModels, loadRoutingRules, route } 
 import { availableProfiles } from "@videoai/gpu-manager";
 import { planRepair as classifyRepair } from "@videoai/quality";
 import { loadCatalogue, recordSkillRun, type SkillPackage } from "@videoai/skills";
+import { METRICS, SPANS, metric, traced } from "@videoai/telemetry";
 
 import {
   buildTimeline as buildTimelineActivity,
@@ -55,6 +56,75 @@ export const HARDWARE_BOUND_ACTIVITIES = [
   "applyRepair",
 ] as const satisfies ReadonlyArray<keyof Activities>;
 
+/**
+ * The span each activity runs inside.
+ *
+ * The names come from `SPANS`, which the spec fixed and which nothing emitted
+ * until now. Held as a table rather than wrapped around each body: an activity
+ * added without a span is then visible here as an absence, instead of silently
+ * running untraced.
+ */
+const SPAN_FOR: Partial<Record<keyof Activities, string>> = {
+  generateBrief: SPANS.planning,
+  generateSceneBible: SPANS.planning,
+  generateScript: SPANS.planning,
+  generateShotPlan: SPANS.planning,
+  runPreflight: SPANS.planning,
+  routeShots: SPANS.planning,
+  generateDialogue: SPANS.generation,
+  alignDialogue: SPANS.generation,
+  generateAmbience: SPANS.generation,
+  generateReferences: SPANS.generation,
+  generateShot: SPANS.generation,
+  applyRepair: SPANS.generation,
+  runQc: SPANS.qc,
+  planRepair: SPANS.repair,
+  buildTimeline: SPANS.render,
+  composeFinal: SPANS.render,
+  exportRenders: SPANS.render,
+};
+
+/**
+ * Wrap every activity that has a span in one.
+ *
+ * `traced` records the failure and rethrows, so instrumentation cannot swallow
+ * an error or change what the workflow sees. Bookkeeping activities are left
+ * alone: they are a single statement each, and a span per checkpoint write
+ * would bury the ones that matter.
+ */
+function instrument(activities: Activities): Activities {
+  const traced_ = Object.fromEntries(
+    Object.entries(activities).map(([name, fn]) => {
+      const span = SPAN_FOR[name as keyof Activities];
+      if (!span) return [name, fn];
+      const call = fn as (input: unknown) => Promise<unknown>;
+      return [
+        name,
+        (input: unknown) => traced(span, { activity: name, job_id: jobIdOf(input) }, () => call(input)),
+      ];
+    }),
+  );
+  return traced_ as unknown as Activities;
+}
+
+function jobIdOf(input: unknown): string | undefined {
+  const id = (input as { job_id?: unknown } | null)?.job_id;
+  return typeof id === "string" ? id : undefined;
+}
+
+/** The dimension that scored worst, which is the one a repair would go after. */
+function lowestDimension(evaluation: { scores: Record<string, number | undefined> }): string {
+  let worst: string | undefined;
+  let lowest = Infinity;
+  for (const [dimension, score] of Object.entries(evaluation.scores)) {
+    if (score !== undefined && score < lowest) {
+      lowest = score;
+      worst = dimension;
+    }
+  }
+  return worst ?? "unknown";
+}
+
 export function createActivities(): Activities {
   const cfg = config();
   const planner = new Planner(new Director(LocalReasoningBackend.fromConfig(cfg)));
@@ -70,7 +140,7 @@ export function createActivities(): Activities {
   let catalogue: Promise<Map<string, SkillPackage>> | null = null;
   const skills = () => (catalogue ??= loadCatalogue(cfg.SKILLS_ROOT));
 
-  return {
+  return instrument({
     async loadCapabilitySnapshot({ organization_id: _organizationId }) {
       const profiles = await availableProfiles();
       return { snapshot: await buildCapabilitySnapshot(profiles) };
@@ -251,6 +321,24 @@ export function createActivities(): Activities {
     // -- CPU bound. Measurement, arithmetic and ffmpeg; no GPU involved.
     async runQc(input) {
       const outcome = await runQualityControl(input);
+
+      // Why a shot failed, not just that it did. The dimension that came in
+      // lowest is what a repair would target, so it is the one worth counting
+      // across a run.
+      if (!outcome.evaluation.passed) {
+        metric(METRICS.qcFailureReason, 1, {
+          job_id: input.job_id,
+          profile: input.qc_profile,
+          reason: outcome.technical_passed ? lowestDimension(outcome.evaluation) : "technical",
+        });
+      }
+      // Recorded every time, passed or not: coverage falling is how the panel
+      // quietly stops checking things, and it only shows up as a trend.
+      metric(METRICS.successRate, outcome.evaluation.passed ? 1 : 0, {
+        job_id: input.job_id,
+        coverage: outcome.coverage,
+      });
+
       return {
         technical_passed: outcome.technical_passed,
         evaluation: outcome.evaluation,
@@ -375,6 +463,9 @@ export function createActivities(): Activities {
     },
 
     async recordSpend({ job_id, gpu_seconds, cost_units, generation_attempts, repair_attempts }) {
+      metric(METRICS.generationTime, gpu_seconds, { job_id });
+      if (repair_attempts) metric(METRICS.repairRate, repair_attempts, { job_id });
+
       await transaction(async (client) => {
         const job = await client.query<{ organization_id: string; project_id: string; budget_spend: object }>(
           "select organization_id, project_id, budget_spend from public.generation_jobs where id = $1 for update",
@@ -411,7 +502,7 @@ export function createActivities(): Activities {
         [job_id],
       );
     },
-  };
+  });
 
   // -- helpers -------------------------------------------------------------
 

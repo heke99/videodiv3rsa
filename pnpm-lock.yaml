@@ -320,6 +320,9 @@ importers:
       '@videoai/orchestrator':
         specifier: workspace:*
         version: link:../orchestrator
+      '@videoai/quality':
+        specifier: workspace:*
+        version: link:../../packages/quality
       '@videoai/storage':
         specifier: workspace:*
         version: link:../../packages/storage
@@ -434,6 +437,9 @@ importers:
       '@videoai/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@videoai/telemetry':
+        specifier: workspace:*
+        version: link:../../packages/telemetry
       '@videoai/timeline':
         specifier: workspace:*
         version: link:../../packages/timeline

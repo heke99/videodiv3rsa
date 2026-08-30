@@ -81,9 +81,12 @@ const routes = {
     shot: { id: "sh1", slug: "shot_01", duration_frames: "360", current_version: 1,
             stale: false, stale_reasons: [], current_asset_id: null, status: "approved" },
     versions: [{ version: 1, asset_id: null, created_at: new Date().toISOString(), overall: 0.91, passed: true }],
-    evaluation: { id: "q1", overall: 0.91, passed: true,
-      metrics: [{ dimension: "identity", score: 0.94, threshold: 0.85, passed: true },
-                { dimension: "lip_sync", score: 0.88, threshold: 0.85, passed: true }] },
+    evaluation: { id: "q1", overall: 0.91, passed: true, coverage: 0.25,
+      metrics: [{ dimension: "flicker", score: 0.94, threshold: 0.6, passed: true },
+                { dimension: "av_sync", score: 0.88, threshold: 0.8, passed: true }],
+      // The vision half of the panel needs hardware; a UGC shot gates on these
+      // four and none of them ran.
+      unmeasured: ["identity", "lip_sync", "hands", "product"] },
   },
   "/api/projects/11111111-1111-4111-8111-111111111111/renders": { renders: [] },
   "/api/library/characters": { entries: [{ id: "c1", slug: "character_001", label: "Maya", is_library_entity: true }] },
@@ -255,7 +258,22 @@ describe("the app in a browser", () => {
   it("shows a shot's quality when one is selected", async () => {
     const page = await signedInPage(browser, "/projects/11111111-1111-4111-8111-111111111111");
     await expect.poll(() => page.getByText("Quality").count()).toBeGreaterThan(0);
-    await expect.poll(() => page.getByText("identity").count()).toBeGreaterThan(0);
+    await expect.poll(() => page.getByText("flicker").count()).toBeGreaterThan(0);
+    await page.close();
+  });
+
+  it("says which quality checks could not run rather than implying they passed", async () => {
+    const page = await signedInPage(browser, "/projects/11111111-1111-4111-8111-111111111111");
+    // The fixture passes on 2 of a UGC shot's 6 gating dimensions. A green
+    // score beside four silent failures-to-check is the claim this exists to
+    // stop the UI making.
+    await expect.poll(() => page.getByText(/could not run/).count()).toBeGreaterThan(0);
+
+    const text = await visibleText(page);
+    expect(text).toContain("passed the checks we can run");
+    for (const missing of ["identity", "lip sync", "hands", "product"]) {
+      expect(text, `the unmeasured dimension "${missing}" was not named`).toContain(missing);
+    }
     await page.close();
   });
 

@@ -173,7 +173,11 @@ export const api = {
         id: string;
         overall: number;
         passed: boolean;
+        /** Fraction of the mode's gating checks that could be run. Null if unknown. */
+        coverage: number | null;
         metrics: Array<{ dimension: string; score: number; threshold: number | null; passed: boolean }>;
+        /** Gating checks that could not run, by name. */
+        unmeasured: string[];
       } | null;
     }>(`/api/shots/${id}`, o),
 

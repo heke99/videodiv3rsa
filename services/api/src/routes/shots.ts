@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import type { QualityMode } from "@videoai/contracts";
 import { query, queryOne, transaction } from "@videoai/database";
+import { QUALITY_PROFILES } from "@videoai/quality";
 import { assertOwned, authenticate, notFound, type Caller } from "../auth.js";
 
 /**
@@ -9,6 +11,22 @@ import { assertOwned, authenticate, notFound, type Caller } from "../auth.js";
  */
 
 const ShotId = z.object({ id: z.string().uuid() });
+
+interface Evaluation {
+  id: string;
+  overall: number;
+  passed: boolean;
+  coverage: number | null;
+  quality_profile: string;
+  metrics: Array<{ dimension: string; score: number; threshold: number | null; passed: boolean }>;
+}
+
+function unmeasuredDimensions(evaluation: Evaluation): string[] {
+  const profile = QUALITY_PROFILES[evaluation.quality_profile as QualityMode];
+  if (!profile) return [];
+  const measured = new Set(evaluation.metrics.map((m) => m.dimension));
+  return Object.keys(profile.dimensions).filter((dimension) => !measured.has(dimension));
+}
 
 async function assertShotOwned(shotId: string, caller: Caller): Promise<{ project_id: string }> {
   const shot = await queryOne<{ project_id: string; organization_id: string }>(
@@ -37,8 +55,8 @@ export async function shotRoutes(app: FastifyInstance): Promise<void> {
          where v.shot_id = $1 order by v.version desc`,
         [id],
       ),
-      queryOne(
-        `select e.id, e.overall, e.passed,
+      queryOne<Evaluation>(
+        `select e.id, e.overall, e.passed, e.coverage, e.quality_profile,
                 coalesce(json_agg(json_build_object(
                   'dimension', m.dimension, 'score', m.score, 'threshold', m.threshold, 'passed', m.passed
                 )) filter (where m.id is not null), '[]') as metrics
@@ -50,7 +68,15 @@ export async function shotRoutes(app: FastifyInstance): Promise<void> {
       ),
     ]);
 
-    return { shot, versions, evaluation };
+    // Which of this profile's gating dimensions went unchecked, by name. The
+    // score alone says nothing about how much of the bar was actually reached,
+    // and while the vision judges need hardware we do not have, most of a
+    // profile can go unmeasured behind a green number.
+    return {
+      shot,
+      versions,
+      evaluation: evaluation && { ...evaluation, unmeasured: unmeasuredDimensions(evaluation) },
+    };
   });
 
   /** Restore an earlier take. A pointer move; nothing is deleted. */
