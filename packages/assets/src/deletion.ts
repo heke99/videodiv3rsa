@@ -126,13 +126,13 @@ export async function deleteProject(
     await queryOne(
       `insert into public.audit_events
          (organization_id, actor_kind, action, target_kind, target_id, metadata)
-       select p.organization_id, 'system', 'project.deleted', 'project', $1::text,
+       select p.organization_id, 'system', 'project.deleted', 'project', ($1::uuid)::text,
               jsonb_build_object(
                 'assets_deleted', $2::int,
                 'objects_deleted', $3::int,
                 'references_removed', $4::int
               )
-       from public.projects p where p.id = $1
+       from public.projects p where p.id = $1::uuid
        returning id`,
       [projectId, outcome.assets_deleted, outcome.objects_deleted, outcome.references_removed],
     );

@@ -2,6 +2,7 @@ import { writeFile } from "node:fs/promises";
 
 import { ApplicationFailure } from "@temporalio/activity";
 import { createAsset } from "@videoai/assets";
+import { config } from "@videoai/config";
 import type {
   AspectRatio,
   DialogueAlignment,
@@ -159,14 +160,27 @@ export async function judgePanel(input: {
   }
 }
 
-/** True when some online worker advertises the QC runtime the vision judges need. */
+/**
+ * True when a healthy worker actually holds the QC model.
+ *
+ * Asked of `gpu_worker_models`, which the supervisor writes on every scan, and
+ * against `lifecycle` and `healthy`, which are the columns `gpu_workers` has.
+ * An earlier version of this asked `gpu_worker_capabilities` for a `status`
+ * column: the table has no writer and the column does not exist, so the query
+ * failed outright and the vision judges could never have been enabled. Same
+ * shape as the installed-model check in `runPreflight`, deliberately -- there
+ * should be one answer to "is this model reachable", not two.
+ */
 async function qcRuntimeAvailable(): Promise<boolean> {
   const row = await queryOne<{ present: boolean }>(
     `select true as present
-     from public.gpu_worker_capabilities c
-     join public.gpu_workers w on w.worker_id = c.worker_id
-     where c.capability = 'qc' and w.status = 'online'
+     from public.gpu_worker_models m
+     join public.gpu_workers w on w.worker_id = m.worker_id
+     where m.model_id = $1
+       and m.present and m.verified
+       and w.healthy and w.lifecycle in ('READY', 'BUSY', 'IDLE')
      limit 1`,
+    [config().QC_MODEL],
   );
   return row !== null;
 }

@@ -146,4 +146,17 @@ insert into rls_results values
 select check_name, expected, actual, (expected = actual) as passed
 from rls_results order by check_name;
 
+-- A verdict, not just a table. Printing results and exiting zero means the
+-- suite can only fail a human who happens to read it, which is no use in CI.
+-- Raising aborts the transaction, so nothing here is kept either way.
+do $verdict$
+declare failed int;
+begin
+  select count(*) into failed from rls_results where expected is distinct from actual;
+  if failed > 0 then
+    raise exception 'RLS: % of % checks failed', failed, (select count(*) from rls_results);
+  end if;
+  raise notice 'RLS: all % checks passed', (select count(*) from rls_results);
+end $verdict$;
+
 rollback;

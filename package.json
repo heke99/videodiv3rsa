@@ -2,6 +2,7 @@
   "name": "videoai",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=22"
@@ -21,11 +22,14 @@
     "dev:web": "pnpm --filter @videoai/web dev",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:schema": "vitest run tests/integration/schema.spec.ts",
+    "db:rls": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f tests/security/rls.sql"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.10.0",
+    "@types/pg": "^8.23.1",
     "@videoai/api": "workspace:*",
     "@videoai/assets": "workspace:*",
     "@videoai/config": "workspace:*",
@@ -49,6 +53,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^17.11.0",
+    "pg": "^8.23.0",
     "playwright": "^1.49.1",
     "prettier": "^3.9.6",
     "tsup": "^8.3.5",

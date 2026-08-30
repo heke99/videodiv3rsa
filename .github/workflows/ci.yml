@@ -42,6 +42,69 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: pnpm test:e2e
 
+  database:
+    # The two bugs this job exists for both reached main: a query filtered on a
+    # column that does not exist, and a parameter used as both uuid and text in
+    # one statement. Neither is visible to the compiler or to a test that does
+    # not execute SQL. A real Postgres sees both immediately.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: videoai
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/videoai
+      # The migrations and the migrate runner read the full config, which has no
+      # defaults by design. None of these reach anything outside the job.
+      PUBLIC_APP_URL: https://ci.invalid
+      APP_NAME: videoai-ci
+      APP_DOMAIN: ci.invalid
+      AUTH_CALLBACK_URL: https://ci.invalid/auth/callback
+      STORAGE_PROVIDER: local
+      STORAGE_BUCKET: ci
+      STORAGE_LOCAL_ROOT: /tmp/videoai-ci
+      GPU_PROVIDER: manual
+      GPU_GATEWAY_SIGNING_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      MODEL_ROOT: /tmp/videoai-models
+      SKILLS_ROOT: skills
+      TEMPORAL_ADDRESS: 127.0.0.1:7233
+      DIRECTOR_MODEL: local/director
+      DIRECTOR_ENDPOINT: http://127.0.0.1:1/v1
+      QC_MODEL: local/qc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      # Supabase provides these on the hosted database; a plain Postgres does
+      # not, and without them the schema cannot be applied anywhere else.
+      - name: Supabase-shaped prerequisites
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f infra/database/local/01-supabase-shim.sql
+
+      - run: pnpm db:migrate
+
+      - name: Table privileges Supabase grants for us
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f infra/database/local/02-supabase-grants.sql
+
+      - name: Every SQL statement matches the schema
+        run: pnpm test:schema
+
+      - name: Row level security
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/security/rls.sql
+
   python:
     runs-on: ubuntu-latest
     steps:
