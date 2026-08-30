@@ -13,6 +13,7 @@ import { query, queryOne, transaction } from "@videoai/database";
 import { Director, LocalReasoningBackend, Planner, preflight } from "@videoai/director";
 import { buildCapabilitySnapshot, loadRoutableModels, loadRoutingRules, route } from "@videoai/models";
 import { availableProfiles } from "@videoai/gpu-manager";
+import { planRepair as classifyRepair } from "@videoai/quality";
 import { loadCatalogue, recordSkillRun, type SkillPackage } from "@videoai/skills";
 
 import {
@@ -257,8 +258,43 @@ export function createActivities(): Activities {
         coverage: outcome.coverage,
       };
     },
-    async planRepair({ job_id, shot, evaluation, required_skills }) {
-      return planner.repairPlan(evaluation, shot, await planningContext(job_id, required_skills));
+    async planRepair({ job_id, shot, evaluation, budget, spend, required_skills }) {
+      // The classifier owns scope, cost and the budget verdict. Asking a model
+      // whether the remaining GPU seconds cover a lipsync pass would replace
+      // arithmetic with an opinion, and the arithmetic is already tested.
+      const decision = classifyRepair({ evaluation, subject_id: shot.id, budget, spend });
+      if (decision.needs_review || decision.plan.scope === "none") {
+        return { plan: decision.plan, needs_review: decision.needs_review, reason: decision.reason };
+      }
+
+      // Only a prompt repair needs words. Every other action the classifier
+      // emits is a mechanical edit it has already specified in full.
+      const prompted = decision.plan.actions.some((a) => a.action === "prompt_repair");
+      if (!prompted) {
+        return { plan: decision.plan, needs_review: false, reason: decision.reason };
+      }
+
+      const drafted = await planner.repairPlan(
+        evaluation,
+        shot,
+        await planningContext(job_id, required_skills),
+      );
+      const wording = drafted.actions.find((a) => a.action === "prompt_repair");
+
+      return {
+        // The Director's scope, cost and choice of actions are discarded; only
+        // the rationale and parameters of the prompt repair are taken.
+        plan: {
+          ...decision.plan,
+          actions: decision.plan.actions.map((action) =>
+            action.action === "prompt_repair" && wording
+              ? { ...action, rationale: wording.rationale, params: wording.params }
+              : action,
+          ),
+        },
+        needs_review: false,
+        reason: decision.reason,
+      };
     },
 
     async buildTimeline(input) {

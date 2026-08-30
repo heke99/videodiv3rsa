@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
 import type {
+  BudgetSpend,
   Checkpoint,
   CreativeBrief,
   JobStatus,
   QualityEvaluation,
   RepairPlan,
+  RetryBudget,
   RoutingDecision,
   SceneBible,
   Script,
@@ -107,13 +109,24 @@ export interface Activities {
     evaluation_id: string;
     coverage: number;
   }>;
+  /**
+   * Decide how to repair a shot, and whether it is worth trying.
+   *
+   * Scope, cost and the budget verdict come from the deterministic classifier,
+   * not from the Director: which failure class a set of findings belongs to and
+   * whether the remaining GPU seconds can cover the cheapest fix are arithmetic,
+   * and were made arithmetic on purpose. The Director is asked only for the
+   * wording of a prompt repair, which is the one part that needs judgement.
+   */
   planRepair(input: {
     job_id: string;
     shot: Shot;
     evaluation: QualityEvaluation;
+    budget: RetryBudget;
+    spend: BudgetSpend;
     /** Skills the routing decision named for this shot's model. */
     required_skills?: string[];
-  }): Promise<RepairPlan>;
+  }): Promise<{ plan: RepairPlan; needs_review: boolean; reason: string }>;
   applyRepair(input: {
     job_id: string;
     plan: RepairPlan;

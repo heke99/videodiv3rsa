@@ -61,7 +61,21 @@ const CALLS: Record<keyof Activities, () => Promise<unknown>> = (() => {
     generateReferences: () => activities.generateReferences(any({ job_id: "j" })),
     generateShot: () => activities.generateShot(any({ job_id: "j", shot })),
     runQc: () => activities.runQc(any({ job_id: "j", asset_id: "a", shot, qc_profile: "STANDARD" })),
-    planRepair: () => activities.planRepair(any({ job_id: "j", shot, evaluation: {} })),
+    planRepair: () =>
+      activities.planRepair(
+        any({
+          job_id: "j",
+          shot,
+          evaluation: { judges: [], scores: {}, quality_profile: "STANDARD" },
+          budget: {
+            max_generation_attempts: 3,
+            max_repair_attempts: 2,
+            max_gpu_seconds: 600,
+            max_cost_units: 100,
+          },
+          spend: { generation_attempts: 1, repair_attempts: 0, gpu_seconds: 10, cost_units: 5 },
+        }),
+      ),
     applyRepair: () => activities.applyRepair(any({ job_id: "j", plan: {}, idempotency_key: "k" })),
     buildTimeline: () => activities.buildTimeline(any({ job_id: "j", plan: { shots: [] }, shot_assets: {} })),
     composeFinal: () => activities.composeFinal(any({ job_id: "j", timeline_id: "t" })),

@@ -300,13 +300,21 @@ export async function production(input: ProductionInput): Promise<ProductionResu
         if (!checkBudget(budget, working).ok) break;
 
         await advance("repairing");
-        const repairPlan = await activities.planRepair({
+        const repairDecision = await activities.planRepair({
           job_id: input.job_id,
           shot,
           evaluation: qc.evaluation,
+          budget,
+          spend: working,
           required_skills: decision.skills,
         });
-        if (repairPlan.scope === "none" || repairPlan.scope === "shot") break;
+        // needs_review is the classifier saying the budget cannot cover the
+        // cheapest fix that would help. A shot-scope repair is a regeneration,
+        // which the attempt loop above already does.
+        const repairPlan = repairDecision.plan;
+        if (repairDecision.needs_review || repairPlan.scope === "none" || repairPlan.scope === "shot") {
+          break;
+        }
 
         const repaired = await activities.applyRepair({
           job_id: input.job_id,
