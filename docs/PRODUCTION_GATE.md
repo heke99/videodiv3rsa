@@ -5,13 +5,21 @@ it actually stands. Items are **done**, **blocked on hardware**, or **not
 built**. Nothing is marked done on the strength of code existing: done means
 verified by something that runs.
 
-Last updated after the integration pass that followed Batch 12.
+Last updated after the second integration pass.
 
-An earlier version of this page overstated what was blocked. Four activities --
-technical QC, timeline assembly, composition and export -- reported themselves
-as needing a GPU when the orchestrator simply had never been wired to the
-implementations written after it. They are wired now, and a test asserts in
-both directions which activities may claim to need hardware.
+This page has now been wrong twice in the same direction, so it is worth saying
+how. The first time it reported four activities as blocked on hardware when
+they were blocked on wiring. The second time it marked QC persistence, the
+editor's version history and observability **Done** on the strength of code
+existing -- which is the one thing the paragraph above says this page does not
+do. The QC service had no callers, nothing wrote the columns the editor reads,
+and no span was ever emitted.
+
+Two bugs came out of the same pass and are worth recording, because both had
+been shipped and neither was visible to any test: a query filtered on a column
+that does not exist, and a parameter used as both `uuid` and `text` in one
+statement, which broke project deletion outright. Every SQL statement in the
+codebase is now checked against a real schema in CI.
 
 ## Infrastructure
 
@@ -40,35 +48,37 @@ against real weights, because that needs the GPU.
 
 ## Workflow
 
-| Item         | State           | Notes                                                                                                                                                                                                  |
-| ------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Director     | **Done**        | Local reasoning behind an adapter; output validated against the schema that generated its JSON Schema.                                                                                                 |
-| Scene Bible  | **Done**        | Versioned entities, `forbidden_changes` honoured, canonical descriptions used verbatim.                                                                                                                |
-| Shot Planner | **Done**        | Splits on action; durations reconciled in code rather than by asking again.                                                                                                                            |
-| Model Router | **Done**        | Data-driven from `routing_rules`, fail-closed on licence.                                                                                                                                              |
-| Timeline     | **Done**        | Integer frames and samples; loudness verified by measuring the render.                                                                                                                                 |
-| QC           | **Partly done** | Measured judges run today, dispatched by the orchestrator. Vision judges join the panel only when a worker advertises the QC runtime, and `coverage()` reports how much of the profile went unchecked. |
-| Repair       | **Done**        | Smallest-scope planner; deterministic repairs need no GPU.                                                                                                                                             |
-| Audio        | **Done**        | Audio-first pipeline, ducking resolved on the timeline.                                                                                                                                                |
-| Render       | **Done**        | FFmpeg compositor verified against real files, called from the workflow.                                                                                                                               |
-| Export       | **Done**        | Presets, caption burn-in, signed download; one deliverable per requested aspect ratio.                                                                                                                 |
-| Skills       | **Done**        | Catalogue loaded per worker, selected per shot, composed into the Director's system prompt and recorded to `skill_runs`. Eval content never reaches a prompt.                                          |
+| Item         | State           | Notes                                                                                                                                                                                                              |
+| ------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Director     | **Done**        | Local reasoning behind an adapter; output validated against the schema that generated its JSON Schema.                                                                                                             |
+| Scene Bible  | **Done**        | Versioned entities, `forbidden_changes` honoured, canonical descriptions used verbatim.                                                                                                                            |
+| Shot Planner | **Done**        | Splits on action; durations reconciled in code rather than by asking again.                                                                                                                                        |
+| Model Router | **Done**        | Data-driven from `routing_rules`, fail-closed on licence.                                                                                                                                                          |
+| Timeline     | **Done**        | Integer frames and samples; loudness verified by measuring the render.                                                                                                                                             |
+| QC           | **Partly done** | Measured judges run today through `services/qc`, dispatched by the orchestrator. Vision judges join only when a healthy worker holds the QC model. Coverage is persisted, returned by the API and named on screen. |
+| Repair       | **Done**        | The deterministic classifier owns scope, cost and the budget refusal; the Director supplies only the wording of a prompt repair.                                                                                   |
+| Audio        | **Done**        | Audio-first pipeline, ducking resolved on the timeline.                                                                                                                                                            |
+| Render       | **Done**        | FFmpeg compositor verified against real files, called from the workflow.                                                                                                                                           |
+| Export       | **Done**        | Presets, caption burn-in, signed download; one deliverable per requested aspect ratio.                                                                                                                             |
+| Skills       | **Done**        | Catalogue loaded per worker, selected per shot, composed into the Director's system prompt and recorded to `skill_runs`. Eval content never reaches a prompt.                                                      |
 
 ## Product
 
-| Item                | State                                                                |
-| ------------------- | -------------------------------------------------------------------- |
-| Signup and login    | **Done** — Supabase auth behind our own adapter                      |
-| Organisations       | **Done**                                                             |
-| Projects            | **Done**                                                             |
-| Create video        | **Done**                                                             |
-| Uploads             | **Done** — typed by magic bytes, size limited, filename never a path |
-| Generation progress | **Done** — production steps, no internal stage names                 |
-| Editor              | **Done** — timeline, shot inspector, versions, repair                |
-| Shot regeneration   | **Done**                                                             |
-| Audio               | **Done**                                                             |
-| Captions            | **Done** — derived from final alignment                              |
-| Export and download | **Done**                                                             |
+| Item                | State                                                                          |
+| ------------------- | ------------------------------------------------------------------------------ |
+| Signup and login    | **Done** — Supabase auth behind our own adapter                                |
+| Organisations       | **Done**                                                                       |
+| Projects            | **Done**                                                                       |
+| Create video        | **Done**                                                                       |
+| Uploads             | **Done** — typed by magic bytes, size limited, filename never a path           |
+| Generation progress | **Done** — production steps, no internal stage names                           |
+| Editor              | **Done** — timeline, shot inspector, versions, repair                          |
+| Take history        | **Done** — every generated take is a version with its asset and its evaluation |
+| Honest QC reporting | **Done** — the inspector names the gating checks that could not run            |
+| Shot regeneration   | **Done**                                                                       |
+| Audio               | **Done**                                                                       |
+| Captions            | **Done** — derived from final alignment                                        |
+| Export and download | **Done**                                                                       |
 
 ## Data
 
@@ -120,6 +130,8 @@ against real weights, because that needs the GPU.
 | Format               | **Done** | Prettier, checked in CI. Skill packages excluded: they are hashed into the registry.                                    |
 | CI                   | **Done** | `.github/workflows/ci.yml` — lint, format, typecheck, build, vitest, pytest, and the guardrails as their own job        |
 | Pipeline integration | **Done** | `tests/integration/pipeline.spec.ts` drives plan to delivered MP4 on CPU, including technical QC and the measured panel |
+| SQL against a schema | **Done** | 111 statements PREPAREd against a real Postgres in CI; caught two shipped bugs, verified to fail on a planted one       |
+| Runs off Supabase    | **Done** | `infra/database/local/` supplies what hosted Supabase provides. All 29 policy checks pass on a plain Postgres 16        |
 
 ## Portability
 
@@ -130,6 +142,14 @@ against real weights, because that needs the GPU.
 | Storage abstraction       | **Done** | Three implementations                                     |
 | GPU migration doc         | **Done** | `docs/GPU_MIGRATION.md`                                   |
 | Domain migration doc      | **Done** | `docs/DOMAIN_MIGRATION.md`                                |
+
+## Observability
+
+| Item      | State           | Notes                                                                                                                                                                              |
+| --------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Spans     | **Done**        | Every planning, generation, QC, repair and render activity, carrying its job id                                                                                                    |
+| Metrics   | **Partly done** | Generation time, repair rate, QC failure reason, and pass rate with coverage attached. The rest of `METRICS` is still unemitted                                                    |
+| Exporting | **Partly done** | Structured JSON on stdout. `OTEL_EXPORTER_OTLP_ENDPOINT` is accepted by config but no OTLP transport exists, and the process says so at startup rather than dropping spans quietly |
 
 ## What blocks production
 
@@ -142,12 +162,18 @@ Two things, and they are the same thing:
    physics, product and lip sync are registered and report themselves
    unavailable. The pipeline's protection against identity drift is currently
    preventative — keyframe-first routing, reference strength, canonical
-   descriptions — with no detection behind it.
+   descriptions — with no detection behind it. The product now says so on the
+   shot inspector rather than showing a bare score, which does not fix it but
+   stops it being invisible.
 
 The whole delivery half of the pipeline -- assembly, composition, technical QC
 and the measured judges -- now runs end to end on CPU in
 `tests/integration/pipeline.spec.ts`. What is unproven is generation, not
 orchestration.
+
+Two smaller things are named above as partly done rather than hidden: most of
+`METRICS` is still unemitted, and there is no OTLP transport behind the
+endpoint the config accepts.
 
 Everything else on this page is either done and verified, or named above as not
 built.
