@@ -83,6 +83,9 @@ importers:
       eslint-plugin-react-hooks:
         specifier: ^5.2.0
         version: 5.2.0(eslint@9.39.5)
+      fastify:
+        specifier: ^5.12.1
+        version: 5.12.1
       globals:
         specifier: ^17.11.0
         version: 17.11.0
@@ -113,6 +116,9 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)(terser@5.51.2)
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
 
   apps/admin:
     dependencies:
@@ -371,6 +377,9 @@ importers:
       '@videoai/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@videoai/telemetry':
+        specifier: workspace:*
+        version: link:../../packages/telemetry
       zod:
         specifier: ^3.24.1
         version: 3.25.76

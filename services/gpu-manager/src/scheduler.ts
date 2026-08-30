@@ -18,7 +18,14 @@ export interface WorkerCandidate {
   loaded_models: string[];
 }
 
-const HEARTBEAT_MAX_AGE_SECONDS = 120;
+/**
+ * How long a worker may go without reporting before it stops counting.
+ *
+ * Exported because the health probe in `providers/manual.ts` was carrying its
+ * own copy of the same number, and two heartbeat windows that can drift apart
+ * is one heartbeat window nobody can reason about.
+ */
+export const HEARTBEAT_MAX_AGE_SECONDS = 120;
 
 /**
  * Workers that can serve a requirement, best first.
@@ -158,7 +165,15 @@ export async function release(reservationId: string): Promise<void> {
     await client.query(
       `update public.gpu_workers
        set queue_depth = greatest(queue_depth - 1, 0),
-           lifecycle = case when queue_depth - 1 <= 0 then 'IDLE' else lifecycle end
+           -- Only a worker that is actually taking work goes back to IDLE.
+           -- Without the DRAINING guard, a worker being drained flipped back to
+           -- IDLE the moment its last job finished, so the fleet view showed a
+           -- machine as available while an operator was trying to retire it.
+           lifecycle = case
+             when lifecycle = 'DRAINING' then 'DRAINING'
+             when queue_depth - 1 <= 0 then 'IDLE'
+             else lifecycle
+           end
        where worker_id = $1`,
       [workerId],
     );

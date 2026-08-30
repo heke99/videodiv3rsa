@@ -53,35 +53,38 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/service.Dockerfile
-      args: { SERVICE: orchestrator }
+      args: { SERVICE: orchestrator, ENTRYPOINT_FILE: worker.js }
     depends_on: [temporal, api]
     env_file: [../../.env]
+    volumes: ["render-scratch:/scratch"]
 
+  # Fleet maintenance: expiring stranded reservations, ageing out silent
+  # workers, suspending idle ones. A loop, not a server -- nothing calls it.
   gpu-manager:
     build:
       context: ../..
       dockerfile: infra/docker/service.Dockerfile
-      args: { SERVICE: gpu-manager }
+      args: { SERVICE: gpu-manager, ENTRYPOINT_FILE: main.js }
     depends_on:
       postgres: { condition: service_healthy }
     env_file: [../../.env]
-    ports: ["8001:8000"]
 
-  director:
+  # Only in the path when STORAGE_PROVIDER=local, and required then: it is what
+  # checks the signature on a signed local URL. Without it every media link 404s,
+  # which is the state this file was in.
+  media:
     build:
       context: ../..
       dockerfile: infra/docker/service.Dockerfile
-      args: { SERVICE: director }
+      args: { SERVICE: media }
     env_file: [../../.env]
-    ports: ["8002:8000"]
-
-  render:
-    build:
-      context: ../..
-      dockerfile: infra/docker/service.Dockerfile
-      args: { SERVICE: render }
-    env_file: [../../.env]
+    ports: ["8004:8004"]
     volumes: ["render-scratch:/scratch"]
+
+# `director`, `render` and `qc` are libraries, not processes. They used to have
+# entries here that built an image whose command did not exist; ARCHITECTURE.md
+# has always described them as packages, and the API and orchestrator import
+# them in-process.
 
 volumes:
   postgres-data:

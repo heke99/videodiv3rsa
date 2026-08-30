@@ -21,6 +21,8 @@ const ENV: Record<string, string> = {
   APP_NAME: "test",
   APP_DOMAIN: "example.test",
   AUTH_CALLBACK_URL: "https://example.test/auth/callback",
+  SUPABASE_URL: "https://example.test",
+  SUPABASE_ANON_KEY: "anon",
   // Port 1 is reserved and never listening, so the CPU-bound activities fail
   // fast on connection refused rather than hanging on a real database.
   DATABASE_URL: "postgres://user:pw@127.0.0.1:1/videoai",
@@ -29,6 +31,7 @@ const ENV: Record<string, string> = {
   STORAGE_LOCAL_ROOT: "/tmp/videoai-boundary-test",
   GPU_PROVIDER: "manual",
   GPU_GATEWAY_SIGNING_KEY: "0".repeat(64),
+  GPU_WORKER_TOKEN: "1".repeat(64),
   MODEL_ROOT: "/tmp/videoai-models",
   SKILLS_ROOT: "skills",
   TEMPORAL_ADDRESS: "127.0.0.1:7233",

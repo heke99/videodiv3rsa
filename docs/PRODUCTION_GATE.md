@@ -5,7 +5,7 @@ it actually stands. Items are **done**, **blocked on hardware**, or **not
 built**. Nothing is marked done on the strength of code existing: done means
 verified by something that runs.
 
-Last updated after the second integration pass.
+Last updated after the third integration pass.
 
 This page has now been wrong twice in the same direction, so it is worth saying
 how. The first time it reported four activities as blocked on hardware when
@@ -21,15 +21,26 @@ that does not exist, and a parameter used as both `uuid` and `text` in one
 statement, which broke project deletion outright. Every SQL statement in the
 codebase is now checked against a real schema in CI.
 
+The third pass found the largest gap of all, and this row was the one that hid
+it. "96 GB worker operational" was marked blocked on hardware, and it was --
+but it would also have stayed blocked _with_ hardware, because the control
+plane had no worker endpoints. The supervisor posted registrations and
+heartbeats to paths nothing served, so nothing ever wrote `last_seen_at`, and
+both scheduler queries filter on it. The fleet was empty by construction. A row
+that is true for the wrong reason is the failure mode this page is most prone
+to, and it has now happened three times.
+
 ## Infrastructure
 
-| Item                     | State                   | Notes                                                                                                               |
-| ------------------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| 96 GB worker operational | **Blocked on hardware** | No GPU is attached. The worker contract, capability scan and registration are implemented and tested without one.   |
-| Portable GPU adapter     | **Done**                | `GpuProvider` with manual, SSH and API-driven implementations. Business logic never names a provider.               |
-| Model volume persistent  | **Done**                | Mounted read-only into every runtime; verified against recorded hashes at startup.                                  |
-| Workers private          | **Done**                | Internal compose network, no public ingress, signed envelopes on every call.                                        |
-| Autosuspend              | **Not built**           | Lifecycle states and idle timeout exist; the policy that acts on them is provider work, deferred with the provider. |
+| Item                     | State                   | Notes                                                                                                                                                                          |
+| ------------------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 96 GB worker operational | **Blocked on hardware** | No GPU is attached. Registration, heartbeat and the scheduler's view of them are now exercised end to end against a real database, so what remains is genuinely the hardware.  |
+| Portable GPU adapter     | **Done**                | `GpuProvider` with manual, SSH and API-driven implementations. Business logic never names a provider.                                                                          |
+| Model volume persistent  | **Done**                | Mounted read-only into every runtime; verified against recorded hashes at startup.                                                                                             |
+| Workers private          | **Done**                | Internal compose network, no public ingress, signed envelopes on every call.                                                                                                   |
+| Autosuspend              | **Done**                | The maintenance loop stops a worker idle past `GPU_IDLE_TIMEOUT_SECONDS`. On a provider that cannot stop machines it says so and carries on, which is the abstraction working. |
+| Fleet maintenance        | **Done**                | Stranded reservations expired, silent workers aged out of healthy. Neither ran at all before: `expireStaleReservations` had no callers.                                        |
+| Local stack runs         | **Done**                | Four of six containers could not start; `director` and `render` were libraries with no process. A test now checks every compose service builds the file it runs.               |
 
 ## Models
 
@@ -124,14 +135,15 @@ against real weights, because that needs the GPU.
 
 ## Engineering
 
-| Item                 | State    | Notes                                                                                                                   |
-| -------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Lint                 | **Done** | Type-aware ESLint across the workspace; `no-floating-promises` and `no-misused-promises` on. ruff for workers.          |
-| Format               | **Done** | Prettier, checked in CI. Skill packages excluded: they are hashed into the registry.                                    |
-| CI                   | **Done** | `.github/workflows/ci.yml` — lint, format, typecheck, build, vitest, pytest, and the guardrails as their own job        |
-| Pipeline integration | **Done** | `tests/integration/pipeline.spec.ts` drives plan to delivered MP4 on CPU, including technical QC and the measured panel |
-| SQL against a schema | **Done** | 111 statements PREPAREd against a real Postgres in CI; caught two shipped bugs, verified to fail on a planted one       |
-| Runs off Supabase    | **Done** | `infra/database/local/` supplies what hosted Supabase provides. All 29 policy checks pass on a plain Postgres 16        |
+| Item                 | State    | Notes                                                                                                                                                             |
+| -------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lint                 | **Done** | Type-aware ESLint across the workspace; `no-floating-promises` and `no-misused-promises` on. ruff for workers.                                                    |
+| Format               | **Done** | Prettier, checked in CI. Skill packages excluded: they are hashed into the registry.                                                                              |
+| CI                   | **Done** | `.github/workflows/ci.yml` — lint, format, typecheck, build, vitest, pytest, and the guardrails as their own job                                                  |
+| Pipeline integration | **Done** | `tests/integration/pipeline.spec.ts` drives plan to delivered MP4 on CPU, including technical QC and the measured panel                                           |
+| Worker control plane | **Done** | Register and heartbeat, tested against the payloads the supervisor actually sends, asserting the scheduler can then see the worker                                |
+| SQL against a schema | **Done** | Every statement PREPAREd against a real Postgres in CI, including those that build a table name at run time; caught three bugs, verified to fail on a planted one |
+| Runs off Supabase    | **Done** | `infra/database/local/` supplies what hosted Supabase provides. All 29 policy checks pass on a plain Postgres 16                                                  |
 
 ## Portability
 
@@ -157,7 +169,9 @@ Two things, and they are the same thing:
 
 1. **No GPU.** Every generation path is written and contract-tested, and none
    has produced a frame. Until a worker is attached, the honest statement is
-   that the orchestration is built and the generation is unproven.
+   that the orchestration is built and the generation is unproven. What changed
+   this pass is that attaching one would now do something: registration,
+   heartbeat and the scheduler's view of them are exercised end to end.
 2. **The vision half of the judge ensemble.** Identity, face, hands, anatomy,
    physics, product and lip sync are registered and report themselves
    unavailable. The pipeline's protection against identity drift is currently

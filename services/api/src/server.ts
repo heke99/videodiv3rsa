@@ -10,6 +10,7 @@ import { libraryRoutes } from "./routes/library.js";
 import { projectRoutes } from "./routes/projects.js";
 import { shotRoutes } from "./routes/shots.js";
 import { timelineRoutes } from "./routes/timeline.js";
+import { workerRoutes } from "./routes/workers.js";
 
 /**
  * The public API. This is the only thing a browser talks to: it never reaches
@@ -49,6 +50,7 @@ await app.register(assetRoutes);
 await app.register(libraryRoutes);
 await app.register(exportRoutes);
 await app.register(adminRoutes);
+await app.register(workerRoutes);
 
 const port = Number(process.env["PORT"] ?? 8000);
 await app.listen({ port, host: "0.0.0.0" });

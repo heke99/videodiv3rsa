@@ -116,6 +116,10 @@ export const METRICS = {
   costPerSecondVideo: "videoai.cost_per_second_video",
   costPerApprovedShot: "videoai.cost_per_approved_shot",
   qcFailureReason: "videoai.qc_failure_reason",
+  /** Fleet maintenance. Idle spend and stranded VRAM only show up as trends. */
+  reservationsExpired: "videoai.reservations_expired",
+  workersSuspended: "videoai.workers_suspended",
+  workersUnhealthy: "videoai.workers_unhealthy",
 } as const;
 
 export function metric(name: string, value: number, attributes: Attributes = {}): void {

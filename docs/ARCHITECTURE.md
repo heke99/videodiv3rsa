@@ -133,14 +133,29 @@ and expired envelopes, and need no outbound internet access after provisioning.
 Python runtimes share one contract in `workers/_sdk`, so a new model family is a
 new container rather than a new integration.
 
-## What is not built yet
+## Processes
 
-Batches 6 to 12 have package boundaries and interfaces here but are follow-on
-work: the full timeline editor UI, the complete skill catalogue, the judge
-ensemble and its human calibration, the breadth of the repair engine, the admin
-UI, and the golden benchmark suite.
+The table above lists packages. Four of them run as processes, and the rest are
+libraries their callers import:
+
+| Process        | What it is                                                                                          |
+| -------------- | --------------------------------------------------------------------------------------------------- |
+| `api`          | Fastify. The browser's only surface, plus the `/internal/workers/*` endpoints a GPU host reports to |
+| `orchestrator` | a Temporal worker running the production workflow                                                   |
+| `gpu-manager`  | a maintenance loop: expiring stranded reservations, ageing out silent workers, suspending idle ones |
+| `media`        | serves signed local media URLs; in the path only when `STORAGE_PROVIDER=local`, and required then   |
+
+`director`, `render`, `qc` and the rest are libraries. They once had entries in
+the compose file that built images whose command did not exist, which is the
+kind of thing `tests/portability/deployment.spec.ts` now catches.
+
+## What is not built yet
 
 GPU-backed generation is implemented against the worker contract and is
 unverified until hardware is attached. Those activities fail loudly with
 `NoGpuWorker` rather than returning something plausible, because a stub that
 looks like it works is worse than an error that says what is missing.
+
+The vision half of the judge ensemble is registered and reports itself
+unavailable; see `docs/PRODUCTION_GATE.md` for what that means in practice and
+for everything else that is partial.

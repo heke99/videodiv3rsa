@@ -43,6 +43,12 @@ const BaseSchema = z.object({
   GPU_PROVIDER: z.enum(["manual", "ssh", "runpod"]),
   GPU_IDLE_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(900),
   GPU_GATEWAY_SIGNING_KEY: z.string().min(32),
+  /**
+   * Shared secret a worker's supervisor presents when it registers and
+   * heartbeats. Separate from the gateway key: that one signs requests going
+   * out to a worker, this one authenticates a worker calling in.
+   */
+  GPU_WORKER_TOKEN: z.string().min(32),
   GPU_ENVELOPE_TTL_SECONDS: z.coerce.number().int().positive().default(120),
   MODEL_ROOT: z.string().min(1),
   /** Where the skill packages live. No default: it is a deployment path. */
@@ -62,6 +68,8 @@ const BaseSchema = z.object({
 
   OTEL_EXPORTER_OTLP_ENDPOINT: Url.optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
+  /** Port the media service listens on. Only used when STORAGE_PROVIDER=local. */
+  MEDIA_PORT: z.coerce.number().int().positive().default(8004),
 });
 
 export type AppConfig = z.infer<typeof BaseSchema>;
@@ -81,8 +89,15 @@ const Schema = BaseSchema.superRefine((cfg, ctx) => {
     }
   };
 
+  // Every authenticated request resolves the caller through Supabase auth,
+  // whatever the storage backend is. Requiring these only for
+  // STORAGE_PROVIDER=supabase let the API start clean on a local or S3
+  // deployment and then throw on the first request a user made, which is the
+  // opposite of failing closed.
+  require("SUPABASE_URL", "to authenticate callers");
+  require("SUPABASE_ANON_KEY", "to authenticate callers");
+
   if (cfg.STORAGE_PROVIDER === "supabase") {
-    require("SUPABASE_URL", "when STORAGE_PROVIDER=supabase");
     require("SUPABASE_SERVICE_ROLE_KEY", "when STORAGE_PROVIDER=supabase");
   }
   if (cfg.STORAGE_PROVIDER === "s3") {

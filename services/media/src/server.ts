@@ -65,5 +65,4 @@ app.get("/media/*", async (request, reply) => {
   return reply.send(Buffer.from(body.slice(range.start, range.end + 1)));
 });
 
-const port = Number(process.env["MEDIA_PORT"] ?? 8004);
-await app.listen({ port, host: "0.0.0.0" });
+await app.listen({ port: cfg.MEDIA_PORT, host: "0.0.0.0" });

@@ -1,4 +1,5 @@
 import { query, queryOne, type GpuWorkerRow } from "@videoai/database";
+import { HEARTBEAT_MAX_AGE_SECONDS } from "../scheduler.js";
 import type { WorkerCapabilities } from "@videoai/contracts";
 import {
   ProviderUnsupportedError,
@@ -54,7 +55,9 @@ export class ManualGpuProvider implements GpuProvider {
     // A worker that stopped reporting is not healthy regardless of its last flag.
     const seen = row.last_seen_at ? Date.parse(row.last_seen_at) : 0;
     const age = (Date.now() - seen) / 1000;
-    if (age > 120) return { healthy: false, detail: `no heartbeat for ${Math.round(age)}s` };
+    if (age > HEARTBEAT_MAX_AGE_SECONDS) {
+      return { healthy: false, detail: `no heartbeat for ${Math.round(age)}s` };
+    }
     return { healthy: true, detail: "heartbeat current" };
   }
 
