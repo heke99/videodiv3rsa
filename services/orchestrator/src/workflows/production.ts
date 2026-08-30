@@ -10,6 +10,7 @@ import type {
   BudgetSpend,
   JobProgress,
   JobStatus,
+  RepairScope,
   RoutingDecision,
   Shot,
   ShotPlan,
@@ -49,6 +50,16 @@ const bookkeeping = proxyActivities<Activities>({
   startToCloseTimeout: "1 minute",
   retry: { maximumAttempts: 5 },
 });
+
+/**
+ * Repair scopes that change nothing a vision judge can see.
+ *
+ * Captions, timing and levels are deterministic edits to the mix and the
+ * subtitle track; re-running the identity or hands judges over them would spend
+ * GPU time to be told what they already said. A re-check after one of these
+ * needs the measured panel only.
+ */
+const DETERMINISTIC_REPAIRS: readonly RepairScope[] = ["caption", "timing", "audio"];
 
 export const cancelSignal = defineSignal("cancel");
 export const progressQuery = defineQuery<JobProgress>("progress");
@@ -264,21 +275,24 @@ export async function production(input: ProductionInput): Promise<ProductionResu
       });
 
       // Measurement before judgement: a broken file should not cost judge time.
-      const technical = await activities.runTechnicalQc({
-        job_id: input.job_id,
-        asset_id: generated.asset_id,
-        shot,
-      });
-      if (!technical.passed) continue;
-
+      // runQc short-circuits on a technical failure and records why.
       await advance("shot_qc");
-      let evaluation = await activities.runJudges({
+      let qc = await activities.runQc({
         job_id: input.job_id,
         asset_id: generated.asset_id,
         shot,
         qc_profile: decision.qc_profile,
       });
-      if (evaluation.passed) return { asset_id: generated.asset_id, spend: working };
+      if (!qc.technical_passed) continue;
+
+      await bookkeeping.recordShotTake({
+        job_id: input.job_id,
+        shot_id: shot.id,
+        asset_id: generated.asset_id,
+        evaluation_id: qc.evaluation_id,
+        passed: qc.evaluation.passed,
+      });
+      if (qc.evaluation.passed) return { asset_id: generated.asset_id, spend: working };
 
       // Repair before regeneration: a shot that is right except for the mouth
       // should cost one lip sync pass, not a whole new shot.
@@ -289,7 +303,7 @@ export async function production(input: ProductionInput): Promise<ProductionResu
         const repairPlan = await activities.planRepair({
           job_id: input.job_id,
           shot,
-          evaluation,
+          evaluation: qc.evaluation,
           required_skills: decision.skills,
         });
         if (repairPlan.scope === "none" || repairPlan.scope === "shot") break;
@@ -311,14 +325,26 @@ export async function production(input: ProductionInput): Promise<ProductionResu
           repair_attempts: 1,
         });
 
+        // A deterministic repair changes captions, timing or levels and cannot
+        // touch anything a vision judge looks at, so re-running the full panel
+        // would spend GPU time to be told what it already said.
         const assetId = repaired.asset_id;
-        evaluation = await activities.runJudges({
+        qc = await activities.runQc({
           job_id: input.job_id,
           asset_id: assetId,
           shot,
           qc_profile: decision.qc_profile,
+          measured_only: DETERMINISTIC_REPAIRS.includes(repairPlan.scope),
         });
-        if (evaluation.passed) return { asset_id: assetId, spend: working };
+
+        await bookkeeping.recordShotTake({
+          job_id: input.job_id,
+          shot_id: shot.id,
+          asset_id: assetId,
+          evaluation_id: qc.evaluation_id,
+          passed: qc.evaluation.passed,
+        });
+        if (qc.evaluation.passed) return { asset_id: assetId, spend: working };
       }
 
       await advance("generating_shots");

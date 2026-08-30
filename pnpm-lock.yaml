@@ -419,6 +419,9 @@ importers:
       '@videoai/models':
         specifier: workspace:*
         version: link:../../packages/models
+      '@videoai/qc':
+        specifier: workspace:*
+        version: link:../qc
       '@videoai/quality':
         specifier: workspace:*
         version: link:../../packages/quality

@@ -60,13 +60,16 @@ const CALLS: Record<keyof Activities, () => Promise<unknown>> = (() => {
     generateAmbience: () => activities.generateAmbience(any({ job_id: "j", shot_ids: [] })),
     generateReferences: () => activities.generateReferences(any({ job_id: "j" })),
     generateShot: () => activities.generateShot(any({ job_id: "j", shot })),
-    runTechnicalQc: () => activities.runTechnicalQc(any({ job_id: "j", asset_id: "a", shot })),
-    runJudges: () => activities.runJudges(any({ job_id: "j", asset_id: "a", shot, qc_profile: "STANDARD" })),
+    runQc: () => activities.runQc(any({ job_id: "j", asset_id: "a", shot, qc_profile: "STANDARD" })),
     planRepair: () => activities.planRepair(any({ job_id: "j", shot, evaluation: {} })),
     applyRepair: () => activities.applyRepair(any({ job_id: "j", plan: {}, idempotency_key: "k" })),
     buildTimeline: () => activities.buildTimeline(any({ job_id: "j", plan: { shots: [] }, shot_assets: {} })),
     composeFinal: () => activities.composeFinal(any({ job_id: "j", timeline_id: "t" })),
     exportRenders: () => activities.exportRenders(any({ job_id: "j", render_asset_id: "a" })),
+    recordShotTake: () =>
+      activities.recordShotTake(
+        any({ job_id: "j", shot_id: "s1", asset_id: "a", evaluation_id: "e", passed: true }),
+      ),
     setJobStatus: () => activities.setJobStatus(any({ job_id: "j", status: "queued" })),
     saveCheckpoint: () => activities.saveCheckpoint(any({ job_id: "j", stage: "s", unit_id: null })),
     loadCheckpoint: () => activities.loadCheckpoint(any({ job_id: "j", stage: "s", unit_id: null })),

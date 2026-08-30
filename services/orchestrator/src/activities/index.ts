@@ -10,7 +10,6 @@ import type {
   Script,
   Shot,
   ShotPlan,
-  TechnicalQcReport,
 } from "@videoai/contracts";
 
 /**
@@ -86,13 +85,28 @@ export interface Activities {
   generateShot(input: ShotGenerationInput): Promise<ShotGenerationOutput>;
 
   // -- quality --------------------------------------------------------------
-  runTechnicalQc(input: { job_id: string; asset_id: string; shot: Shot }): Promise<TechnicalQcReport>;
-  runJudges(input: {
+  /**
+   * Technical QC and the judge panel, in that order.
+   *
+   * One activity rather than two because the order is not the caller's to
+   * choose: a file that fails technical QC is broken in a way no judge's
+   * opinion changes, and the short-circuit that records why is part of the
+   * measurement. `coverage` reports how much of the profile was reachable, and
+   * is not optional -- `passed` on its own overstates what was checked.
+   */
+  runQc(input: {
     job_id: string;
     asset_id: string;
     shot: Shot;
     qc_profile: string;
-  }): Promise<QualityEvaluation>;
+    /** Measured judges only, for re-checking after a deterministic repair. */
+    measured_only?: boolean;
+  }): Promise<{
+    technical_passed: boolean;
+    evaluation: QualityEvaluation;
+    evaluation_id: string;
+    coverage: number;
+  }>;
   planRepair(input: {
     job_id: string;
     shot: Shot;
@@ -114,6 +128,24 @@ export interface Activities {
   exportRenders(input: { job_id: string; render_asset_id: string }): Promise<{ export_ids: string[] }>;
 
   // -- bookkeeping ----------------------------------------------------------
+  /**
+   * Record one take of a shot: the asset, the evaluation that judged it, and
+   * what it did to the shot's state.
+   *
+   * The editor's version history and its restore button both read
+   * `shot_versions.asset_id` and `shot_versions.quality_evaluation_id`, and the
+   * project view reads `shots.current_asset_id` and `shots.status`. Nothing in
+   * the pipeline wrote any of them, so every generated shot appeared as
+   * `planned` with no asset and no history to restore from.
+   */
+  recordShotTake(input: {
+    job_id: string;
+    /** The shot's slug, as it appears in the plan. */
+    shot_id: string;
+    asset_id: string;
+    evaluation_id: string;
+    passed: boolean;
+  }): Promise<{ version: number }>;
   setJobStatus(input: { job_id: string; status: JobStatus; message?: string }): Promise<void>;
   saveCheckpoint(input: Checkpoint): Promise<void>;
   loadCheckpoint(input: {

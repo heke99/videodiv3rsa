@@ -26,6 +26,7 @@
     "@videoai/director": "workspace:*",
     "@videoai/gpu-manager": "workspace:*",
     "@videoai/models": "workspace:*",
+    "@videoai/qc": "workspace:*",
     "@videoai/quality": "workspace:*",
     "@videoai/render": "workspace:*",
     "@videoai/skills": "workspace:*",

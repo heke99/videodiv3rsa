@@ -105,6 +105,11 @@ jobs:
       - name: Row level security
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/security/rls.sql
 
+      # The database-backed suites skip themselves without DATABASE_URL, so the
+      # typescript job never runs them. This is the only place they execute.
+      - name: Database-backed suites
+        run: pnpm test:integration
+
   python:
     runs-on: ubuntu-latest
     steps:

@@ -19,8 +19,8 @@ import {
   buildTimeline as buildTimelineActivity,
   composeFinal as composeFinalActivity,
   exportRenders as exportRendersActivity,
-  judgePanel,
-  technicalQc,
+  recordShotTake as recordShotTakeActivity,
+  runQualityControl,
 } from "./delivery.js";
 import type { Activities } from "./index.js";
 
@@ -248,11 +248,14 @@ export function createActivities(): Activities {
     },
 
     // -- CPU bound. Measurement, arithmetic and ffmpeg; no GPU involved.
-    async runTechnicalQc(input) {
-      return technicalQc(input);
-    },
-    async runJudges(input) {
-      return judgePanel(input);
+    async runQc(input) {
+      const outcome = await runQualityControl(input);
+      return {
+        technical_passed: outcome.technical_passed,
+        evaluation: outcome.evaluation,
+        evaluation_id: outcome.evaluation_id,
+        coverage: outcome.coverage,
+      };
     },
     async planRepair({ job_id, shot, evaluation, required_skills }) {
       return planner.repairPlan(evaluation, shot, await planningContext(job_id, required_skills));
@@ -269,6 +272,10 @@ export function createActivities(): Activities {
     },
 
     // -- bookkeeping -------------------------------------------------------
+    async recordShotTake(input) {
+      return recordShotTakeActivity(input);
+    },
+
     async setJobStatus({ job_id, status, message }) {
       await queryOne(
         `update public.generation_jobs

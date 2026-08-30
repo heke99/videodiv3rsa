@@ -75,7 +75,8 @@ export async function runQc(request: QcRequest): Promise<QcOutcome> {
       passed: false,
       unmeasured: [],
     };
-    const id = await persist(request, evaluation);
+    // Coverage is zero rather than null: nothing was checked, and we know it.
+    const id = await persist(request, evaluation, 0);
     return { evaluation, evaluation_id: id, coverage: 0, technical_passed: false };
   }
 
@@ -86,13 +87,9 @@ export async function runQc(request: QcRequest): Promise<QcOutcome> {
     { subject_kind: request.subject_kind, subject_id: request.subject_id, profile: request.profile },
   );
 
-  const id = await persist(request, evaluation);
-  return {
-    evaluation,
-    evaluation_id: id,
-    coverage: coverage(evaluation, request.profile),
-    technical_passed: true,
-  };
+  const measured = coverage(evaluation, request.profile);
+  const id = await persist(request, evaluation, measured);
+  return { evaluation, evaluation_id: id, coverage: measured, technical_passed: true };
 }
 
 /** The measured panel only, for a fast re-check after a deterministic repair. */
@@ -111,13 +108,17 @@ export function planRepairFor(
   });
 }
 
-async function persist(request: QcRequest, evaluation: EnsembleResult): Promise<string> {
+async function persist(
+  request: QcRequest,
+  evaluation: EnsembleResult,
+  measuredCoverage: number,
+): Promise<string> {
   return transaction(async (client) => {
     const inserted = await client.query<{ id: string }>(
       `insert into public.quality_evaluations
          (organization_id, project_id, job_id, subject_kind, subject_id, asset_id,
-          quality_profile, overall, passed)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          quality_profile, overall, passed, coverage)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        returning id`,
       [
         request.organization_id,
@@ -129,6 +130,7 @@ async function persist(request: QcRequest, evaluation: EnsembleResult): Promise<
         request.profile,
         evaluation.overall,
         evaluation.passed,
+        measuredCoverage,
       ],
     );
     const evaluationId = inserted.rows[0]!.id;

@@ -7,17 +7,16 @@ import type {
   AspectRatio,
   DialogueAlignment,
   LoudnessProfile,
-  QualityEvaluation,
   QualityMode,
   Shot,
   ShotPlan,
-  TechnicalQcReport,
   Timeline,
 } from "@videoai/contracts";
 import { EXPORT_PRESETS, Timebase } from "@videoai/contracts";
 import { query, queryOne, transaction } from "@videoai/database";
-import { coverage, evaluate, measuredJudges, modelJudges, type Judge } from "@videoai/quality";
-import { compose, probe, runTechnicalQc as measureFile, toSrt } from "@videoai/render";
+import { recheck, runQc, type QcOutcome, type QcRequest } from "@videoai/qc";
+import { measuredJudges, modelJudges, type Judge } from "@videoai/quality";
+import { compose, probe, toSrt } from "@videoai/render";
 import { assembleTimeline, type AssembledDialogue } from "@videoai/timeline";
 
 import { materialise, readLocal, scratch } from "./media.js";
@@ -86,78 +85,81 @@ export async function jobContext(jobId: string): Promise<JobContext> {
   };
 }
 
-// -- technical QC -----------------------------------------------------------
-
-export async function technicalQc(input: {
-  job_id: string;
-  asset_id: string;
-  shot: Shot;
-}): Promise<TechnicalQcReport> {
-  const ctx = await jobContext(input.job_id);
-  const media = await materialise([input.asset_id]);
-  try {
-    const path = media.paths[input.asset_id]!;
-    return await measureFile(path, {
-      asset_id: input.asset_id,
-      expected_frames: input.shot.duration_frames,
-      expected_fps: ctx.timebase.frame_rate,
-      // Deliberately no expected width or height: a shot is generated at
-      // whatever resolution its model produces and the compositor scales and
-      // pads it to the export preset. Asserting the delivery size here would
-      // fail every shot from a model that renders smaller, which is not a
-      // defect in the file.
-      expects_audio: input.shot.dialogue_line_ids.length > 0,
-      expected_sample_rate: ctx.timebase.audio_sample_rate,
-    });
-  } finally {
-    await media.cleanup();
-  }
-}
-
-// -- judges -----------------------------------------------------------------
+// -- quality control -------------------------------------------------------
 
 /**
- * Run the judges that can run.
+ * Technical QC and the judge panel, for one asset.
  *
- * The measured judges are deterministic ffmpeg measurements and always run.
- * The vision judges need a QC runtime on a worker; they are included only when
- * one is advertised, so that a report from a hardware-less deployment lists the
- * dimensions it actually looked at instead of a column of "unavailable".
- *
- * Either way `coverage()` says how much of the gating profile was checked, and
- * the caller is expected to pass that on rather than claim a bare "passed".
+ * The sequencing, the short-circuit on a broken file and the persistence all
+ * live in `@videoai/qc`; this only resolves the job's context, puts the bytes
+ * on disk where ffmpeg can reach them, and decides which judges are eligible.
+ * An earlier version of this file reimplemented the persistence and got it
+ * wrong in two ways -- it never recorded a dimension's threshold, and it wrote
+ * the evaluation's overall verdict onto every metric row instead of comparing
+ * each score to its own threshold -- both of which the editor reads.
  */
-export async function judgePanel(input: {
+export async function runQualityControl(input: {
   job_id: string;
   asset_id: string;
   shot: Shot;
   qc_profile: string;
-}): Promise<QualityEvaluation & { coverage: number }> {
+  /** Measured judges only. For re-checking after a deterministic repair. */
+  measured_only?: boolean;
+}): Promise<QcOutcome> {
   const ctx = await jobContext(input.job_id);
   const profile = input.qc_profile as QualityMode;
-
-  const judges: Judge[] = [...measuredJudges];
-  if (await qcRuntimeAvailable()) judges.push(...modelJudges);
-
   const media = await materialise([input.asset_id]);
+
   try {
-    const evaluation = await evaluate(
-      judges,
-      {
-        asset_path: media.paths[input.asset_id]!,
+    const request: QcRequest = {
+      organization_id: ctx.organization_id,
+      project_id: ctx.project_id,
+      job_id: input.job_id,
+      asset_id: input.asset_id,
+      asset_path: media.paths[input.asset_id]!,
+      subject_kind: "shot",
+      subject_id: input.shot.id,
+      profile,
+      technical: {
+        asset_id: input.asset_id,
+        expected_frames: input.shot.duration_frames,
+        expected_fps: ctx.timebase.frame_rate,
+        // Deliberately no expected width or height: a shot is generated at
+        // whatever resolution its model produces and the compositor scales and
+        // pads it to the export preset. Asserting the delivery size here would
+        // fail every shot from a model that renders smaller, which is not a
+        // defect in the file.
+        expects_audio: input.shot.dialogue_line_ids.length > 0,
+        expected_sample_rate: ctx.timebase.audio_sample_rate,
+      },
+      judge_context: {
         planned_motion_complexity: input.shot.motion_complexity,
         loudness_profile: ctx.loudness_profile,
         audio_sample_rate: ctx.timebase.audio_sample_rate,
         expects_audio: input.shot.dialogue_line_ids.length > 0,
       },
-      { subject_kind: "shot", subject_id: input.shot.id, profile },
-    );
+      judges: await panel(input.measured_only ?? false),
+    };
 
-    await persistEvaluation(ctx, input.job_id, input.asset_id, evaluation);
-    return { ...evaluation, coverage: coverage(evaluation, profile) };
+    return input.measured_only ? await recheck(request) : await runQc(request);
   } finally {
     await media.cleanup();
   }
+}
+
+/**
+ * The judges eligible to run.
+ *
+ * The measured judges are ffmpeg measurements and always run. The vision judges
+ * need the QC model on a worker, and are included only when one holds it -- so
+ * a report from a hardware-less deployment lists what was actually looked at
+ * rather than a column of "unavailable". Either way the outcome carries
+ * `coverage`, which is how much of the gating profile was reached; a caller
+ * that drops it is claiming more than was checked.
+ */
+async function panel(measuredOnly: boolean): Promise<Judge[]> {
+  if (measuredOnly) return [...measuredJudges];
+  return (await qcRuntimeAvailable()) ? [...measuredJudges, ...modelJudges] : [...measuredJudges];
 }
 
 /**
@@ -165,11 +167,8 @@ export async function judgePanel(input: {
  *
  * Asked of `gpu_worker_models`, which the supervisor writes on every scan, and
  * against `lifecycle` and `healthy`, which are the columns `gpu_workers` has.
- * An earlier version of this asked `gpu_worker_capabilities` for a `status`
- * column: the table has no writer and the column does not exist, so the query
- * failed outright and the vision judges could never have been enabled. Same
- * shape as the installed-model check in `runPreflight`, deliberately -- there
- * should be one answer to "is this model reachable", not two.
+ * Same shape as the installed-model check in `runPreflight`, deliberately --
+ * there should be one answer to "is this model reachable", not two.
  */
 async function qcRuntimeAvailable(): Promise<boolean> {
   const row = await queryOne<{ present: boolean }>(
@@ -185,64 +184,63 @@ async function qcRuntimeAvailable(): Promise<boolean> {
   return row !== null;
 }
 
-async function persistEvaluation(
-  ctx: JobContext,
-  jobId: string,
-  assetId: string,
-  evaluation: QualityEvaluation,
-): Promise<void> {
-  await transaction(async (client) => {
-    const inserted = await client.query<{ id: string }>(
-      `insert into public.quality_evaluations
-         (organization_id, project_id, job_id, subject_kind, subject_id, asset_id,
-          quality_profile, overall, passed)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       returning id`,
-      [
-        ctx.organization_id,
-        ctx.project_id,
-        jobId,
-        evaluation.subject_kind,
-        evaluation.subject_id,
-        assetId,
-        evaluation.quality_profile,
-        evaluation.overall,
-        evaluation.passed,
-      ],
+// -- shot takes -------------------------------------------------------------
+
+/**
+ * Record one take of a shot.
+ *
+ * A take is a new `shot_versions` row carrying the asset and the evaluation
+ * that judged it, plus the shot's own pointer moved to it. Both are what the
+ * editor reads: the version list, the quality badge beside each version, and
+ * the restore button that moves the pointer back. Until this existed nothing
+ * wrote them, so a generated shot showed as `planned` with an empty history.
+ *
+ * The shot's document is carried forward from the previous version rather than
+ * rewritten: a take changes which pixels are current, not what the shot is.
+ */
+export async function recordShotTake(input: {
+  job_id: string;
+  shot_id: string;
+  asset_id: string;
+  evaluation_id: string;
+  passed: boolean;
+}): Promise<{ version: number }> {
+  const ctx = await jobContext(input.job_id);
+
+  return transaction(async (client) => {
+    const shot = await client.query<{ id: string }>(
+      "select id from public.shots where project_id = $1 and slug = $2",
+      [ctx.project_id, input.shot_id],
     );
-    const evaluationId = inserted.rows[0]!.id;
-
-    for (const judge of evaluation.judges) {
-      for (const found of judge.findings) {
-        await client.query(
-          `insert into public.quality_findings
-             (evaluation_id, organization_id, judge_id, judge_version, code, severity,
-              message, frames, entity_ref)
-           values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [
-            evaluationId,
-            ctx.organization_id,
-            judge.judge_id,
-            judge.judge_version,
-            found.code,
-            found.severity,
-            found.message,
-            found.frames,
-            found.entity_ref,
-          ],
-        );
-      }
+    const shotId = shot.rows[0]?.id;
+    if (!shotId) {
+      throw ApplicationFailure.nonRetryable(`Shot ${input.shot_id} is not in project ${ctx.project_id}`);
     }
 
-    for (const [dimension, score] of Object.entries(evaluation.scores)) {
-      if (score === undefined) continue;
-      await client.query(
-        `insert into public.quality_metrics (evaluation_id, organization_id, dimension, score, passed)
-         values ($1, $2, $3, $4, $5)
-         on conflict (evaluation_id, dimension) do update set score = excluded.score`,
-        [evaluationId, ctx.organization_id, dimension, score, evaluation.passed],
-      );
-    }
+    const inserted = await client.query<{ version: number }>(
+      `insert into public.shot_versions (shot_id, organization_id, version, document, asset_id, quality_evaluation_id)
+       select $1, $2, coalesce(max(v.version), 0) + 1,
+              coalesce(
+                (select v2.document from public.shot_versions v2
+                 where v2.shot_id = $1 order by v2.version desc limit 1),
+                '{}'::jsonb
+              ),
+              $3, $4
+       from public.shot_versions v where v.shot_id = $1
+       returning version`,
+      [shotId, ctx.organization_id, input.asset_id, input.evaluation_id],
+    );
+    const version = inserted.rows[0]!.version;
+
+    await client.query(
+      `update public.shots
+       set current_version = $2, current_asset_id = $3, status = $4,
+           stale = false, stale_reasons = '{}'
+       where id = $1`,
+      [shotId, version, input.asset_id, input.passed ? "approved" : "needs_review"],
+    );
+
+    return { version };
   });
 }
 
