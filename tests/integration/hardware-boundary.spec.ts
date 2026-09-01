@@ -2,17 +2,23 @@ import { describe, expect, it } from "vitest";
 import type { Activities } from "@videoai/orchestrator";
 import {
   createActivities,
-  HARDWARE_BOUND_ACTIVITIES,
+  DISPATCHING_ACTIVITIES,
+  UNIMPLEMENTED_ACTIVITIES,
 } from "../../services/orchestrator/src/activities/implementations.js";
 
 /**
- * What actually needs a GPU, pinned.
+ * What is written and what is not, pinned in both directions.
  *
- * The interesting failure this guards against is the cheerful one: an activity
- * that reports "requires a provisioned GPU worker" when it needs nothing of the
- * sort makes the whole system look more blocked than it is, and four of these
- * did exactly that until the delivery path was wired up. So the boundary is
- * asserted in both directions -- what must refuse, and what must not.
+ * Two failures this guards against, and they are opposites. One is the cheerful
+ * kind: an activity reporting that it needs a GPU when it needs nothing of the
+ * sort, which made the system look more blocked than it was. The other is the
+ * flattering kind: an activity that never dispatches claiming to be "built but
+ * unverified until hardware", which is how `generateShot` sat throwing for
+ * twelve batches while `callWorker` had no callers at all.
+ *
+ * So there are three sets. Unimplemented activities say so by name. Dispatching
+ * ones reach the fleet and refuse for capacity. Everything else must not blame
+ * hardware for its own failures.
  */
 
 const ENV: Record<string, string> = {
@@ -95,31 +101,45 @@ const CALLS: Record<keyof Activities, () => Promise<unknown>> = (() => {
   };
 })();
 
-async function refusesForHardware(call: () => Promise<unknown>): Promise<boolean> {
+async function failsWith(call: () => Promise<unknown>, type: string): Promise<boolean> {
   try {
     await call();
     return false;
   } catch (error) {
-    return (error as { type?: string }).type === "NoGpuWorker";
+    const failure = error as { type?: string; name?: string; message?: string };
+    return failure.type === type || failure.name === type || Boolean(failure.message?.includes(type));
   }
 }
 
 describe("the hardware boundary", () => {
-  it.each(HARDWARE_BOUND_ACTIVITIES)("%s refuses without a GPU worker", async (name) => {
-    expect(await refusesForHardware(CALLS[name])).toBe(true);
+  it.each(UNIMPLEMENTED_ACTIVITIES)("%s says plainly that it is not written", async (name) => {
+    expect(await failsWith(CALLS[name], "NotImplemented")).toBe(true);
   });
 
-  const cpuBound = (Object.keys(CALLS) as Array<keyof Activities>).filter(
-    (name) => !(HARDWARE_BOUND_ACTIVITIES as readonly string[]).includes(name),
+  it.each(UNIMPLEMENTED_ACTIVITIES)("%s does not claim to be waiting on hardware", async (name) => {
+    // The distinction the whole file turns on. "Blocked on hardware" is a
+    // claim that the code exists, and for these four it does not.
+    expect(await failsWith(CALLS[name], "NoCapacityError")).toBe(false);
+  });
+
+  const rest = (Object.keys(CALLS) as Array<keyof Activities>).filter(
+    (name) => !(UNIMPLEMENTED_ACTIVITIES as readonly string[]).includes(name),
   );
 
-  it.each(cpuBound)("%s does not claim to need a GPU", async (name) => {
+  it.each(rest)("%s does not claim to be unimplemented", async (name) => {
     // These may well fail -- there is no database behind this test -- but they
-    // must fail for the reason they actually have, not by blaming hardware.
-    expect(await refusesForHardware(CALLS[name])).toBe(false);
+    // must fail for the reason they actually have.
+    expect(await failsWith(CALLS[name], "NotImplemented")).toBe(false);
   });
 
   it("covers every activity", () => {
-    expect(Object.keys(CALLS).length).toBe(cpuBound.length + HARDWARE_BOUND_ACTIVITIES.length);
+    expect(Object.keys(CALLS).length).toBe(rest.length + UNIMPLEMENTED_ACTIVITIES.length);
+  });
+
+  it("names the activities that dispatch, and they are not in the unwritten list", () => {
+    for (const name of DISPATCHING_ACTIVITIES) {
+      expect(UNIMPLEMENTED_ACTIVITIES as readonly string[]).not.toContain(name);
+      expect(Object.keys(CALLS)).toContain(name);
+    }
   });
 });

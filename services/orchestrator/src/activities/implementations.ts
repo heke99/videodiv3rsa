@@ -1,20 +1,26 @@
 import { ApplicationFailure } from "@temporalio/activity";
 import { config } from "@videoai/config";
 import type {
+  AspectRatio,
   CapabilitySnapshot,
   Checkpoint,
   CreativeBrief,
+  GenerateRequest,
   JobStatus,
+  RepairPlan,
   SceneBible,
   Script,
+  Shot,
   ShotPlan,
 } from "@videoai/contracts";
+import { EXPORT_PRESETS } from "@videoai/contracts";
 import { query, queryOne, transaction } from "@videoai/database";
-import { Director, LocalReasoningBackend, Planner, preflight } from "@videoai/director";
+import { compileShotPrompt, Director, LocalReasoningBackend, Planner, preflight } from "@videoai/director";
 import { buildCapabilitySnapshot, loadRoutableModels, loadRoutingRules, route } from "@videoai/models";
 import { availableProfiles } from "@videoai/gpu-manager";
 import { planRepair as classifyRepair } from "@videoai/quality";
 import { loadCatalogue, recordSkillRun, type SkillPackage } from "@videoai/skills";
+import { adjustCredit } from "@videoai/usage";
 import { METRICS, SPANS, metric, traced } from "@videoai/telemetry";
 
 import {
@@ -24,6 +30,7 @@ import {
   recordShotTake as recordShotTakeActivity,
   runQualityControl,
 } from "./delivery.js";
+import { dispatch } from "./generate.js";
 import type { Activities } from "./index.js";
 
 /**
@@ -41,20 +48,31 @@ import type { Activities } from "./index.js";
  * composition and export are ffmpeg and arithmetic, and run here.
  */
 /**
- * The activities that genuinely cannot run without a GPU.
+ * Activities that are still not written.
  *
- * Exported so the claim is testable: everything named here must fail with
- * `NoGpuWorker`, and everything not named here must not, which is what stops
- * the list drifting back into covering work that only looks expensive.
+ * A shrinking list, and the distinction it draws has changed. `generateShot`
+ * and `applyRepair` used to be here; they are now implemented, and against an
+ * empty fleet they fail with `NoCapacityError` -- "no worker holds this model"
+ * rather than "nobody wrote this". The four below genuinely have no
+ * implementation yet: each needs its own routing call and its own request
+ * shape, and claiming otherwise would be the thing this list exists to stop.
  */
-export const HARDWARE_BOUND_ACTIVITIES = [
+export const UNIMPLEMENTED_ACTIVITIES = [
   "generateDialogue",
   "alignDialogue",
   "generateAmbience",
   "generateReferences",
-  "generateShot",
-  "applyRepair",
 ] as const satisfies ReadonlyArray<keyof Activities>;
+
+/**
+ * Activities that dispatch to a GPU worker.
+ *
+ * Written, and reachable: with a worker registered they generate, and without
+ * one they refuse by name. Exported so a test can hold both halves of that.
+ */
+export const DISPATCHING_ACTIVITIES = ["generateShot", "applyRepair"] as const satisfies ReadonlyArray<
+  keyof Activities
+>;
 
 /**
  * The span each activity runs inside.
@@ -297,8 +315,99 @@ export function createActivities(): Activities {
       }));
     },
 
-    // -- GPU backed. Implemented against the worker contract; unverified until
-    // hardware exists, and deliberately not faked in the meantime.
+    // -- GPU backed. These reserve a worker, dispatch a signed request and
+    // record the attempt. With no worker holding the model they fail with
+    // NoCapacityError, which says what is actually missing.
+    async generateShot(input) {
+      const { bible } = await documentsFor(input.job_id);
+      const compiled = compileShotPrompt({
+        shot: input.shot,
+        bible,
+        quality_mode: input.decision.qc_profile,
+        required_skills: input.decision.skills,
+        skills: await skills(),
+        idempotency_key: input.idempotency_key,
+      });
+
+      const project = await projectShape(input.project_id);
+      return dispatch({
+        job_id: input.job_id,
+        organization_id: input.organization_id,
+        project_id: input.project_id,
+        shot_slug: input.shot.id,
+        attempt: input.attempt,
+        idempotency_key: input.idempotency_key,
+        decision: input.decision,
+        request: {
+          shot_id: input.shot.id,
+          model_id: input.decision.model_id,
+          model_version: input.decision.model_version,
+          precision: input.decision.precision,
+          prompt: compiled.prompt,
+          negative_prompt: compiled.negative_prompt,
+          references: referencesFor(input.shot),
+          driving_audio: null,
+          seed: compiled.seed,
+          duration_frames: input.shot.duration_frames,
+          fps_num: project.frame_rate_num,
+          fps_den: project.frame_rate_den,
+          resolution: project.resolution,
+          settings: {},
+        },
+        asset: { kind: "video", role: "shot", mime: "video/mp4", extension: ".mp4" },
+        provenance: { skill_versions: compiled.skill_versions },
+      });
+    },
+
+    async applyRepair({ job_id, plan, decision, shot, idempotency_key, source_asset_id }) {
+      const { bible } = await documentsFor(job_id);
+      const job = await requireJob(job_id);
+      const compiled = compileShotPrompt({
+        shot,
+        bible,
+        quality_mode: decision.qc_profile,
+        required_skills: decision.skills,
+        skills: await skills(),
+        idempotency_key,
+      });
+
+      const project = await projectShape(job.project_id);
+      const output = await dispatch({
+        job_id,
+        organization_id: job.organization_id,
+        project_id: job.project_id,
+        shot_slug: shot.id,
+        attempt: 1,
+        idempotency_key,
+        decision,
+        request: {
+          shot_id: shot.id,
+          model_id: decision.model_id,
+          model_version: decision.model_version,
+          precision: decision.precision,
+          prompt: compiled.prompt,
+          negative_prompt: compiled.negative_prompt,
+          references: referencesFor(shot),
+          driving_audio: null,
+          seed: compiled.seed,
+          duration_frames: shot.duration_frames,
+          fps_num: project.frame_rate_num,
+          fps_den: project.frame_rate_den,
+          resolution: project.resolution,
+          // The repair's scope and actions travel to the adapter, which is what
+          // makes a lipsync pass different from a regeneration on the worker.
+          settings: { repair_scope: plan.scope, repair_actions: plan.actions },
+        },
+        asset: { kind: "video", role: "shot", mime: "video/mp4", extension: ".mp4" },
+        provenance: { skill_versions: compiled.skill_versions },
+        // The graph edge that makes "what was this repaired from" answerable.
+        derived_from: source_asset_id ? { asset_id: source_asset_id, relationship: "repaired_from" } : null,
+      });
+
+      await recordRepairAttempt(job_id, job, plan, output.asset_id);
+      return output;
+    },
+
     async generateDialogue() {
       throw notYetOnHardware("dialogue generation");
     },
@@ -310,12 +419,6 @@ export function createActivities(): Activities {
     },
     async generateReferences() {
       throw notYetOnHardware("reference generation");
-    },
-    async generateShot() {
-      throw notYetOnHardware("shot generation");
-    },
-    async applyRepair() {
-      throw notYetOnHardware("repair");
     },
 
     // -- CPU bound. Measurement, arithmetic and ffmpeg; no GPU involved.
@@ -466,6 +569,14 @@ export function createActivities(): Activities {
       metric(METRICS.generationTime, gpu_seconds, { job_id });
       if (repair_attempts) metric(METRICS.repairRate, repair_attempts, { job_id });
 
+      // Preflight gates on the credit balance, and until now nothing ever
+      // debited it: a job could spend all day against a number that never
+      // moved. The ledger entry is what makes that gate mean something.
+      if (cost_units > 0) {
+        const job = await requireJob(job_id);
+        await adjustCredit(job.organization_id, -cost_units, "generation", job_id);
+      }
+
       await transaction(async (client) => {
         const job = await client.query<{ organization_id: string; project_id: string; budget_spend: object }>(
           "select organization_id, project_id, budget_spend from public.generation_jobs where id = $1 for update",
@@ -548,6 +659,80 @@ export function createActivities(): Activities {
     };
   }
 
+  /** The project's timebase and delivery resolution, which every request needs. */
+  async function projectShape(projectId: string) {
+    const row = await queryOne<{
+      frame_rate_num: number;
+      frame_rate_den: number;
+      aspect_ratio: string;
+    }>("select frame_rate_num, frame_rate_den, aspect_ratio from public.projects where id = $1", [projectId]);
+    if (!row) throw ApplicationFailure.nonRetryable(`Project ${projectId} not found`);
+    const preset = EXPORT_PRESETS[row.aspect_ratio as AspectRatio];
+    if (!preset) {
+      throw ApplicationFailure.nonRetryable(`No resolution for aspect ratio ${row.aspect_ratio}`);
+    }
+    return {
+      frame_rate_num: row.frame_rate_num,
+      frame_rate_den: row.frame_rate_den,
+      resolution: { width: preset.width, height: preset.height },
+    };
+  }
+
+  /**
+   * The Scene Bible this job planned with.
+   *
+   * Read back from the stored version rather than threaded through the
+   * workflow: a Temporal workflow replays its arguments, a Scene Bible is
+   * large, and the version rows are the record anyway.
+   */
+  async function documentsFor(jobId: string) {
+    const job = await requireJob(jobId);
+    const bible = await queryOne<{ document: SceneBible }>(
+      `select v.document
+       from public.scene_bible_versions v
+       join public.scene_bibles b on b.id = v.scene_bible_id and b.current_version = v.version
+       where b.project_id = $1`,
+      [job.project_id],
+    );
+    if (!bible) {
+      throw ApplicationFailure.nonRetryable(`Project ${job.project_id} has no Scene Bible to generate from`);
+    }
+    return { bible: bible.document };
+  }
+
+  /**
+   * Record the repair: the plan that was chosen, then one attempt per action.
+   *
+   * The schema splits them because a plan can name several actions and each one
+   * either worked or did not; a single row would lose which part of a repair
+   * was the part that failed.
+   */
+  async function recordRepairAttempt(
+    jobId: string,
+    job: { organization_id: string },
+    plan: RepairPlan,
+    assetId: string,
+  ): Promise<void> {
+    await transaction(async (client) => {
+      const planRow = await client.query<{ id: string }>(
+        `insert into public.repair_plans (organization_id, job_id, subject_id, scope, document)
+         values ($1, $2, $3, $4, $5)
+         returning id`,
+        [job.organization_id, jobId, plan.subject_id, plan.scope, plan],
+      );
+      const planId = planRow.rows[0]!.id;
+
+      for (const [index, action] of plan.actions.entries()) {
+        await client.query(
+          `insert into public.repair_attempts
+             (repair_plan_id, organization_id, attempt, action, target_id, status,
+              result_asset_id, finished_at)
+           values ($1, $2, $3, $4, $5, 'succeeded', $6, now())`,
+          [planId, job.organization_id, index + 1, action.action, action.target_id, assetId],
+        );
+      }
+    });
+  }
   /** Store a planning artefact as a new immutable version of its document. */
   async function saveVersion(
     jobId: string,
@@ -685,10 +870,35 @@ export function createActivities(): Activities {
  * the alternative -- a stub that returns something plausible -- would make the
  * pipeline look like it works.
  */
+/**
+ * Reference images a shot should be generated against.
+ *
+ * Keyframes first: a shot that starts from a given frame is the strongest
+ * continuity tool the pipeline has, which is why the router prefers
+ * image_to_video when one exists.
+ */
+function referencesFor(shot: Shot): GenerateRequest["references"] {
+  const references: GenerateRequest["references"] = [];
+  if (shot.start_frame_asset) {
+    references.push({ role: "start_frame", asset: shot.start_frame_asset, strength: 1 });
+  }
+  if (shot.end_frame_asset) {
+    references.push({ role: "end_frame", asset: shot.end_frame_asset, strength: 1 });
+  }
+  return references;
+}
+
+/**
+ * The honest failure for work nobody has written yet.
+ *
+ * Distinct from `NoCapacityError`, which means the code exists and the fleet
+ * cannot serve it. Conflating the two is what let "blocked on hardware" hide
+ * an activity that never dispatched at all.
+ */
 function notYetOnHardware(what: string): ApplicationFailure {
   return ApplicationFailure.nonRetryable(
-    `${what} requires a provisioned GPU worker. The worker contract and dispatch are ` +
-      `implemented; this path is unverified until hardware is attached.`,
-    "NoGpuWorker",
+    `${what} is not implemented yet. The worker contract and the dispatch path exist; ` +
+      `this activity has not been wired to them.`,
+    "NotImplemented",
   );
 }

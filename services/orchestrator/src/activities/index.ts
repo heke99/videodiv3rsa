@@ -130,7 +130,15 @@ export interface Activities {
   applyRepair(input: {
     job_id: string;
     plan: RepairPlan;
+    /** The shot being repaired, and the model that generated it. */
+    shot: Shot;
+    decision: RoutingDecision;
     idempotency_key: string;
+    /**
+     * The take this repair works from. Recorded as a `repaired_from` edge, so
+     * "what was this repaired from" stays answerable after a version restore.
+     */
+    source_asset_id: string | null;
   }): Promise<ShotGenerationOutput>;
 
   // -- delivery -------------------------------------------------------------

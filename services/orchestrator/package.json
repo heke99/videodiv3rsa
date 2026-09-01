@@ -32,6 +32,7 @@
     "@videoai/skills": "workspace:*",
     "@videoai/storage": "workspace:*",
     "@videoai/telemetry": "workspace:*",
-    "@videoai/timeline": "workspace:*"
+    "@videoai/timeline": "workspace:*",
+    "@videoai/usage": "workspace:*"
   }
 }

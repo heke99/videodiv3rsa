@@ -47,15 +47,26 @@ to, and it has now happened three times.
 Every family has an adapter, a runtime and health tests. None has been run
 against real weights, because that needs the GPU.
 
-| Model                         | Adapter        | Contract tests | Real inference      |
-| ----------------------------- | -------------- | -------------- | ------------------- |
-| Wan T2V / I2V / S2V / Animate | Done           | Done           | Blocked on hardware |
-| Qwen Image                    | Done           | Done           | Blocked on hardware |
-| Qwen3-TTS                     | Done           | Done           | Blocked on hardware |
-| MMAudio                       | Done           | Done           | Blocked on hardware |
-| MuseTalk                      | Done           | Done           | Blocked on hardware |
-| WhisperX                      | Done           | Done           | Blocked on hardware |
-| QC vision                     | Interface only | n/a            | Blocked on hardware |
+The column that mattered was the one this table did not have. Every adapter was
+"Done" and inference "blocked on hardware" — and separately, nothing called any
+of them. `generateShot` threw instead of dispatching, so `callWorker` had no
+callers at all. Whether an activity reaches the adapter is now its own column,
+because that is where the gap was.
+
+| Model                         | Adapter        | Contract tests | Dispatched by an activity | Real inference      |
+| ----------------------------- | -------------- | -------------- | ------------------------- | ------------------- |
+| Wan T2V / I2V / S2V / Animate | Done           | Done           | **Done**                  | Blocked on hardware |
+| Qwen Image                    | Done           | Done           | Not built                 | Blocked on hardware |
+| Qwen3-TTS                     | Done           | Done           | Not built                 | Blocked on hardware |
+| MMAudio                       | Done           | Done           | Not built                 | Blocked on hardware |
+| MuseTalk                      | Done           | Done           | **Done** (repair scope)   | Blocked on hardware |
+| WhisperX                      | Done           | Done           | Not built                 | Blocked on hardware |
+| QC vision                     | Interface only | n/a            | n/a                       | Blocked on hardware |
+
+"Not built" means the activity that would route to that family and build its
+request does not exist: `generateReferences`, `generateDialogue`,
+`alignDialogue` and `generateAmbience` still fail with `NotImplemented`, and
+say so rather than blaming hardware.
 
 ## Workflow
 
@@ -142,6 +153,8 @@ against real weights, because that needs the GPU.
 | CI                   | **Done** | `.github/workflows/ci.yml` — lint, format, typecheck, build, vitest, pytest, and the guardrails as their own job                                                  |
 | Pipeline integration | **Done** | `tests/integration/pipeline.spec.ts` drives plan to delivered MP4 on CPU, including technical QC and the measured panel                                           |
 | Worker control plane | **Done** | Register and heartbeat, tested against the payloads the supervisor actually sends, asserting the scheduler can then see the worker                                |
+| Generation dispatch  | **Done** | Reservation, signed call, attempt row, provenance, asset and release, exercised against a stub worker that verifies the envelope                                  |
+| Replay safety        | **Done** | The same idempotency key twice generates once — the guarantee the key was computed for and never used until now                                                   |
 | SQL against a schema | **Done** | Every statement PREPAREd against a real Postgres in CI, including those that build a table name at run time; caught three bugs, verified to fail on a planted one |
 | Runs off Supabase    | **Done** | `infra/database/local/` supplies what hosted Supabase provides. All 29 policy checks pass on a plain Postgres 16                                                  |
 
@@ -165,13 +178,15 @@ against real weights, because that needs the GPU.
 
 ## What blocks production
 
-Two things, and they are the same thing:
+Three things now, because one of them stopped being "the same thing" as the
+others once generation was actually wired:
 
-1. **No GPU.** Every generation path is written and contract-tested, and none
-   has produced a frame. Until a worker is attached, the honest statement is
-   that the orchestration is built and the generation is unproven. What changed
-   this pass is that attaching one would now do something: registration,
-   heartbeat and the scheduler's view of them are exercised end to end.
+1. **No GPU.** Shot generation and repair now dispatch: reserve a worker, sign
+   the envelope, call, record the attempt with full provenance, store the asset,
+   release the reservation. All of it is exercised against a stub worker that
+   verifies the signature, so what is unproven is a model producing frames and
+   nothing else. The four audio and reference activities are not written yet
+   and report that, not hardware.
 2. **The vision half of the judge ensemble.** Identity, face, hands, anatomy,
    physics, product and lip sync are registered and report themselves
    unavailable. The pipeline's protection against identity drift is currently
@@ -184,6 +199,13 @@ The whole delivery half of the pipeline -- assembly, composition, technical QC
 and the measured judges -- now runs end to end on CPU in
 `tests/integration/pipeline.spec.ts`. What is unproven is generation, not
 orchestration.
+
+3. **Four activities that are not written.** `generateReferences`,
+   `generateDialogue`, `alignDialogue` and `generateAmbience` each need their
+   own routing call and request shape on top of the dispatch helper that now
+   exists. They fail with `NotImplemented` and say so, which is the distinction
+   this page kept losing: code that does not exist is not code that is waiting
+   for a GPU.
 
 Two smaller things are named above as partly done rather than hidden: most of
 `METRICS` is still unemitted, and there is no OTLP transport behind the

@@ -319,7 +319,10 @@ export async function production(input: ProductionInput): Promise<ProductionResu
         const repaired = await activities.applyRepair({
           job_id: input.job_id,
           plan: repairPlan,
+          shot,
+          decision,
           idempotency_key: `${input.job_id}:${shot.id}:${attempt}:repair:${repair}`,
+          source_asset_id: generated.asset_id,
         });
         working = spend(working, {
           repair_attempts: 1,
