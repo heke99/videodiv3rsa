@@ -75,12 +75,23 @@ export interface Activities {
     job_id: string;
     script: Script;
     bible: SceneBible;
-  }): Promise<Array<{ dialogue_line_id: string; asset_id: string; length_samples: number }>>;
+  }): Promise<Array<{ dialogue_line_id: string; asset_id: string; length_samples: number; text: string }>>;
+  /**
+   * The aligner is given each line's audio and the words it was meant to say.
+   *
+   * Both, rather than the asset alone: an aligner asked to transcribe as well
+   * would let a mishearing rewrite the script, and the timings it produces are
+   * what the captions and the lipsync repair are built from.
+   */
   alignDialogue(input: {
     job_id: string;
-    dialogue_asset_ids: string[];
+    dialogue: Array<{ dialogue_line_id: string; asset_id: string; text: string }>;
   }): Promise<Array<{ dialogue_line_id: string; alignment_id: string }>>;
-  generateAmbience(input: { job_id: string; shot_ids: string[] }): Promise<{ asset_ids: string[] }>;
+  /** Ambience is derived from each shot's approved take, so it follows the cut. */
+  generateAmbience(input: {
+    job_id: string;
+    shots: Array<{ shot_id: string; asset_id: string }>;
+  }): Promise<{ asset_ids: string[] }>;
 
   // -- references and shots -------------------------------------------------
   generateReferences(input: { job_id: string; bible: SceneBible }): Promise<{ asset_ids: string[] }>;

@@ -46,11 +46,23 @@ export async function compose(input: ComposeInput): Promise<void> {
     const label = `v${index}`;
     // Scale then pad so a source of a different aspect is letterboxed rather
     // than stretched, and force a constant frame rate onto the project timebase.
+    // The trailing tpad/trim pair is what makes the segment exactly as long as
+    // the timeline says, even when the source is shorter than the event.
+    //
+    // That happens for real: assembly extends a shot to hold speech that came
+    // out longer than planned, and the picture generated against the old length
+    // then falls short. Without this the render came out at the source's length
+    // while the mix ran on, so the last of the line played over nothing and the
+    // file disagreed with its own timeline. Holding the last frame is a
+    // fallback, not a fix -- the shot should be regenerated at its new length --
+    // but a short render is a broken deliverable and this is not.
     filters.push(
       `[${index}:v]trim=start=${start}:duration=${duration},setpts=PTS-STARTPTS,` +
         `scale=${input.width}:${input.height}:force_original_aspect_ratio=decrease,` +
         `pad=${input.width}:${input.height}:(ow-iw)/2:(oh-ih)/2,` +
-        `fps=${fps.num}/${fps.den},format=yuv420p[${label}]`,
+        `fps=${fps.num}/${fps.den},` +
+        `tpad=stop_mode=clone:stop_duration=${duration},` +
+        `trim=duration=${duration},setpts=PTS-STARTPTS,format=yuv420p[${label}]`,
     );
     videoLabels.push(label);
   });

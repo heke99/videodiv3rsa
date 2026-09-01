@@ -30,9 +30,17 @@ export const HEARTBEAT_MAX_AGE_SECONDS = 120;
 /**
  * Workers that can serve a requirement, best first.
  *
- * Preference order is deliberate: a worker that already has the model resident
- * beats an idle one, because a cold load of a 14B model costs more than the
- * queue wait it would avoid.
+ * A worker qualifies only if it actually holds the model, present and verified.
+ * That used to be a sort key and not a filter, so a host that had never
+ * downloaded the weights was a valid candidate: the reservation succeeded, the
+ * generation was dispatched, and the failure arrived from the worker halfway
+ * through instead of here. It also made this the third and most permissive
+ * answer to "is this model reachable" -- `runPreflight` and the QC panel both
+ * already require `present and verified`, and there should be one answer.
+ *
+ * Among the workers that qualify, preference order is deliberate: one with the
+ * model already resident beats an idle one, because a cold load of a 14B model
+ * costs more than the queue wait it would avoid.
  */
 export async function selectWorkers(
   requirement: WorkerRequirement,
@@ -42,14 +50,15 @@ export async function selectWorkers(
     `select w.*,
             coalesce(array_agg(m.model_id) filter (where m.loaded), '{}') as loaded_models
      from public.gpu_workers w
-     left join public.gpu_worker_models m on m.worker_id = w.worker_id
+     join public.gpu_worker_models m
+       on m.worker_id = w.worker_id and m.model_id = $3 and m.present and m.verified
      where w.healthy
        and not w.drain_requested
        and w.lifecycle in ('READY', 'BUSY', 'IDLE')
        and w.last_seen_at > now() - make_interval(secs => $1)
        and $2 = any(w.supported_precisions)
      group by w.worker_id`,
-    [HEARTBEAT_MAX_AGE_SECONDS, requirement.required_precision],
+    [HEARTBEAT_MAX_AGE_SECONDS, requirement.required_precision, modelId],
   );
 
   const needed = GPU_PROFILE_VRAM_GIB[requirement.required_profile];
@@ -75,11 +84,15 @@ export async function selectWorkers(
 }
 
 export class NoCapacityError extends Error {
-  constructor(requirement: WorkerRequirement) {
+  constructor(requirement: WorkerRequirement, modelId?: string) {
     super(
       `No healthy worker satisfies ${requirement.required_profile} / ` +
         `${requirement.required_precision} / ${requirement.required_runtime} with ` +
-        `${(requirement.required_vram_bytes / 1024 ** 3).toFixed(1)} GiB free.`,
+        `${(requirement.required_vram_bytes / 1024 ** 3).toFixed(1)} GiB free` +
+        // Naming the model matters now that holding it is a condition of being
+        // selected: "no capacity" and "nobody has downloaded this" look the
+        // same from here and mean very different things to an operator.
+        (modelId ? `, and holds ${modelId} verified.` : "."),
     );
     this.name = "NoCapacityError";
   }
@@ -106,7 +119,7 @@ export async function reserve(
   ttlSeconds = 900,
 ): Promise<Reservation> {
   const candidates = await selectWorkers(requirement, modelId);
-  if (candidates.length === 0) throw new NoCapacityError(requirement);
+  if (candidates.length === 0) throw new NoCapacityError(requirement, modelId);
 
   for (const candidate of candidates) {
     const reservation = await transaction(async (client) => {
@@ -148,7 +161,7 @@ export async function reserve(
   }
 
   // Every candidate lost its capacity between selection and locking.
-  throw new NoCapacityError(requirement);
+  throw new NoCapacityError(requirement, modelId);
 }
 
 export async function release(reservationId: string): Promise<void> {

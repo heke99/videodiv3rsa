@@ -51,9 +51,34 @@ export const ModelLicense = z.object({
 });
 export type ModelLicense = z.infer<typeof ModelLicense>;
 
+/**
+ * Every kind of work a model can be routed for.
+ *
+ * A superset of `GenerationKind`, which is what a *shot* may ask for. Speech,
+ * alignment, ambience and lipsync are not shots and never appear in a shot
+ * plan, but they are routed through the same registry and the same rules --
+ * the model registry has carried capability rows for them since the first
+ * seed, and this enum is what finally lets the router see them. Kept in step
+ * with the check constraint on `model_capabilities.generation_kind`.
+ */
+export const RoutableKind = z.enum([
+  ...GenerationKind.options,
+  "text_to_speech",
+  "video_to_audio",
+  "lipsync",
+  "alignment",
+  "vision_qc",
+  "reasoning",
+  "upscale",
+]);
+export type RoutableKind = z.infer<typeof RoutableKind>;
+
 export const ModelCapability = z.object({
-  generation_kind: GenerationKind,
-  max_duration_frames: z.number().int().positive(),
+  generation_kind: RoutableKind,
+  // Zero means "not bounded by frames": a TTS line is as long as the sentence
+  // and an alignment pass has no output length at all. The router skips the
+  // duration check for those rather than rejecting every one of them.
+  max_duration_frames: z.number().int().nonnegative(),
   supported_resolutions: z.array(Resolution).min(1),
   supported_precisions: z.array(Precision).min(1),
   accepts_reference_images: z.boolean().default(false),
@@ -85,9 +110,11 @@ export type ModelVersionRecord = z.infer<typeof ModelVersionRecord>;
 
 /** Input to the router (spec section 17). */
 export const RoutingRequest = z.object({
-  generation_kind: GenerationKind,
+  generation_kind: RoutableKind,
   quality_mode: QualityMode,
-  duration_frames: z.number().int().positive(),
+  // Zero for work that is not measured in frames -- a line of speech, an
+  // alignment pass, an ambience bed. The router skips its duration check then.
+  duration_frames: z.number().int().nonnegative(),
   resolution: Resolution,
   human_count: z.number().int().nonnegative().default(0),
   has_dialogue: z.boolean().default(false),
@@ -125,7 +152,7 @@ export const RoutingRule = z.object({
   priority: z.number().int(),
   enabled: z.boolean().default(true),
   match: z.object({
-    generation_kind: z.array(GenerationKind).optional(),
+    generation_kind: z.array(RoutableKind).optional(),
     quality_mode: z.array(QualityMode).optional(),
     has_dialogue: z.boolean().optional(),
     requires_identity_lock: z.boolean().optional(),
@@ -222,8 +249,8 @@ export const CapabilitySnapshot = z.object({
     z.object({
       model_id: ModelId,
       version: z.string(),
-      generation_kinds: z.array(GenerationKind),
-      max_duration_frames: z.number().int().positive(),
+      generation_kinds: z.array(RoutableKind),
+      max_duration_frames: z.number().int().nonnegative(),
     }),
   ),
   skills: z.array(z.object({ skill_id: Slug, version: z.string() })),

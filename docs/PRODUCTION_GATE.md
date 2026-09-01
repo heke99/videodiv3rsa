@@ -5,7 +5,7 @@ it actually stands. Items are **done**, **blocked on hardware**, or **not
 built**. Nothing is marked done on the strength of code existing: done means
 verified by something that runs.
 
-Last updated after the third integration pass.
+Last updated after the fourth integration pass.
 
 This page has now been wrong twice in the same direction, so it is worth saying
 how. The first time it reported four activities as blocked on hardware when
@@ -29,6 +29,19 @@ heartbeats to paths nothing served, so nothing ever wrote `last_seen_at`, and
 both scheduler queries filter on it. The fleet was empty by construction. A row
 that is true for the wrong reason is the failure mode this page is most prone
 to, and it has now happened three times.
+
+The fourth pass is the one where a whole job runs. It found the same shape
+again and one level up: `generateShot` had been wired to dispatch and was
+unreachable, because the workflow calls `generateDialogue` on the line
+immediately after routing and that threw. Every production run had been dying
+before shot generation, and no test noticed because each stage was tested on
+its own. `tests/integration/production.spec.ts` now drives them in the
+workflow's own order, and it found two things nothing else could: the
+compositor rendered a shot at its source length rather than the length the
+timeline asked for, so a shot extended to hold its speech came out short with
+the mix running on past the picture; and `selectWorkers` treated "does this
+host hold the model" as a sort key rather than a filter, so a generation could
+be dispatched to a machine that had never downloaded the weights.
 
 ## Infrastructure
 
@@ -56,17 +69,22 @@ because that is where the gap was.
 | Model                         | Adapter        | Contract tests | Dispatched by an activity | Real inference      |
 | ----------------------------- | -------------- | -------------- | ------------------------- | ------------------- |
 | Wan T2V / I2V / S2V / Animate | Done           | Done           | **Done**                  | Blocked on hardware |
-| Qwen Image                    | Done           | Done           | Not built                 | Blocked on hardware |
-| Qwen3-TTS                     | Done           | Done           | Not built                 | Blocked on hardware |
-| MMAudio                       | Done           | Done           | Not built                 | Blocked on hardware |
+| Qwen Image                    | Done           | Done           | **Done**                  | Blocked on hardware |
+| Qwen3-TTS                     | Done           | Done           | **Done**                  | Blocked on hardware |
+| MMAudio                       | Done           | Done           | **Done**                  | Blocked on hardware |
 | MuseTalk                      | Done           | Done           | **Done** (repair scope)   | Blocked on hardware |
-| WhisperX                      | Done           | Done           | Not built                 | Blocked on hardware |
+| WhisperX                      | Done           | Done           | **Done**                  | Blocked on hardware |
 | QC vision                     | Interface only | n/a            | n/a                       | Blocked on hardware |
 
-"Not built" means the activity that would route to that family and build its
-request does not exist: `generateReferences`, `generateDialogue`,
-`alignDialogue` and `generateAmbience` still fail with `NotImplemented`, and
-say so rather than blaming hardware.
+Every family a production reaches now has an activity that routes to it and
+builds its request, and `UNIMPLEMENTED_ACTIVITIES` is empty -- asserted, not
+deleted. Two things had to change underneath for that to be true. The contract
+carried a `GenerationKind` of five shot kinds while the registry had shipped
+capability rows for speech, alignment, ambience and lipsync since the first
+seed, so the router could describe those models and never choose one;
+`RoutableKind` is the superset, and migration `0015` adds the rules that point
+at them. Against an empty fleet all six now fail with `NoCapacityError` naming
+the model, which is a different claim from "nobody wrote this".
 
 ## Workflow
 
@@ -79,7 +97,7 @@ say so rather than blaming hardware.
 | Timeline     | **Done**        | Integer frames and samples; loudness verified by measuring the render.                                                                                                                                             |
 | QC           | **Partly done** | Measured judges run today through `services/qc`, dispatched by the orchestrator. Vision judges join only when a healthy worker holds the QC model. Coverage is persisted, returned by the API and named on screen. |
 | Repair       | **Done**        | The deterministic classifier owns scope, cost and the budget refusal; the Director supplies only the wording of a prompt repair.                                                                                   |
-| Audio        | **Done**        | Audio-first pipeline, ducking resolved on the timeline.                                                                                                                                                            |
+| Audio        | **Done**        | Audio-first pipeline, ducking resolved on the timeline. Speech length is measured from the produced file with ffprobe, and a shot too short for its line is extended rather than the line clipped.                 |
 | Render       | **Done**        | FFmpeg compositor verified against real files, called from the workflow.                                                                                                                                           |
 | Export       | **Done**        | Presets, caption burn-in, signed download; one deliverable per requested aspect ratio.                                                                                                                             |
 | Skills       | **Done**        | Catalogue loaded per worker, selected per shot, composed into the Director's system prompt and recorded to `skill_runs`. Eval content never reaches a prompt.                                                      |
@@ -146,17 +164,18 @@ say so rather than blaming hardware.
 
 ## Engineering
 
-| Item                 | State    | Notes                                                                                                                                                             |
-| -------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lint                 | **Done** | Type-aware ESLint across the workspace; `no-floating-promises` and `no-misused-promises` on. ruff for workers.                                                    |
-| Format               | **Done** | Prettier, checked in CI. Skill packages excluded: they are hashed into the registry.                                                                              |
-| CI                   | **Done** | `.github/workflows/ci.yml` — lint, format, typecheck, build, vitest, pytest, and the guardrails as their own job                                                  |
-| Pipeline integration | **Done** | `tests/integration/pipeline.spec.ts` drives plan to delivered MP4 on CPU, including technical QC and the measured panel                                           |
-| Worker control plane | **Done** | Register and heartbeat, tested against the payloads the supervisor actually sends, asserting the scheduler can then see the worker                                |
-| Generation dispatch  | **Done** | Reservation, signed call, attempt row, provenance, asset and release, exercised against a stub worker that verifies the envelope                                  |
-| Replay safety        | **Done** | The same idempotency key twice generates once — the guarantee the key was computed for and never used until now                                                   |
-| SQL against a schema | **Done** | Every statement PREPAREd against a real Postgres in CI, including those that build a table name at run time; caught three bugs, verified to fail on a planted one |
-| Runs off Supabase    | **Done** | `infra/database/local/` supplies what hosted Supabase provides. All 29 policy checks pass on a plain Postgres 16                                                  |
+| Item                 | State    | Notes                                                                                                                                                                                                                                             |
+| -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lint                 | **Done** | Type-aware ESLint across the workspace; `no-floating-promises` and `no-misused-promises` on. ruff for workers.                                                                                                                                    |
+| Format               | **Done** | Prettier, checked in CI. Skill packages excluded: they are hashed into the registry.                                                                                                                                                              |
+| CI                   | **Done** | `.github/workflows/ci.yml` — lint, format, typecheck, build, vitest, pytest, and the guardrails as their own job                                                                                                                                  |
+| Pipeline integration | **Done** | `tests/integration/pipeline.spec.ts` drives plan to delivered MP4 on CPU, including technical QC and the measured panel                                                                                                                           |
+| Worker control plane | **Done** | Register and heartbeat, tested against the payloads the supervisor actually sends, asserting the scheduler can then see the worker                                                                                                                |
+| Generation dispatch  | **Done** | Reservation, signed call, attempt row, provenance, asset and release, exercised against a stub worker that verifies the envelope                                                                                                                  |
+| Whole job in order   | **Done** | `tests/integration/production.spec.ts` runs dialogue, alignment, references, shots, ambience, timeline, composition and export in the workflow's order, and asserts the speech on the timeline is the measured length rather than the planned one |
+| Replay safety        | **Done** | The same idempotency key twice generates once — the guarantee the key was computed for and never used until now                                                                                                                                   |
+| SQL against a schema | **Done** | Every statement PREPAREd against a real Postgres in CI, including those that build a table name at run time; caught three bugs, verified to fail on a planted one                                                                                 |
+| Runs off Supabase    | **Done** | `infra/database/local/` supplies what hosted Supabase provides. All 29 policy checks pass on a plain Postgres 16                                                                                                                                  |
 
 ## Portability
 
@@ -181,12 +200,12 @@ say so rather than blaming hardware.
 Three things now, because one of them stopped being "the same thing" as the
 others once generation was actually wired:
 
-1. **No GPU.** Shot generation and repair now dispatch: reserve a worker, sign
-   the envelope, call, record the attempt with full provenance, store the asset,
-   release the reservation. All of it is exercised against a stub worker that
-   verifies the signature, so what is unproven is a model producing frames and
-   nothing else. The four audio and reference activities are not written yet
-   and report that, not hardware.
+1. **No GPU.** Every generating stage now dispatches: reserve a worker, sign the
+   envelope, call, record the attempt with full provenance, store the asset,
+   release the reservation. A whole job -- speech, alignment, reference views,
+   shots, ambience, timeline, composition, export -- runs end to end against a
+   stub worker that verifies every signature, so what is unproven is a model
+   producing frames and nothing else.
 2. **The vision half of the judge ensemble.** Identity, face, hands, anatomy,
    physics, product and lip sync are registered and report themselves
    unavailable. The pipeline's protection against identity drift is currently
@@ -200,23 +219,28 @@ and the measured judges -- now runs end to end on CPU in
 `tests/integration/pipeline.spec.ts`. What is unproven is generation, not
 orchestration.
 
-3. **Four activities that are not written.** `generateReferences`,
-   `generateDialogue`, `alignDialogue` and `generateAmbience` each need their
-   own routing call and request shape on top of the dispatch helper that now
-   exists. They fail with `NotImplemented` and say so, which is the distinction
-   this page kept losing: code that does not exist is not code that is waiting
-   for a GPU.
+3. **Crash recovery has still not been run against the real workflow.**
+   `production.spec.ts` drives the activities in the workflow's order, which is
+   what proves the pipeline; it does not replay the workflow itself. A Temporal
+   `TestWorkflowEnvironment` run is the honest next step, and needs a downloaded
+   test server.
 
-Two smaller things are named above as partly done rather than hidden: most of
-`METRICS` is still unemitted, and there is no OTLP transport behind the
-endpoint the config accepts.
+Three smaller things are named above as partly done rather than hidden: most of
+`METRICS` is still unemitted, there is no OTLP transport behind the endpoint the
+config accepts, and a shot extended past its source renders by holding its last
+frame. That last one is a fallback and not a fix -- the shot should be
+regenerated at its new length -- but a render that disagrees with its own
+timeline is a broken deliverable, and this is not.
 
 Everything else on this page is either done and verified, or named above as not
 built.
 
 ## The order to do them in
 
-1. Attach a 96 GB worker and follow `docs/GPU_MIGRATION.md`.
+1. Attach a 96 GB worker and follow `docs/GPU_MIGRATION.md`. The supervisor's
+   model scan is now load-bearing: a worker that has not reported a model as
+   present and verified is not a candidate for it, and the failure says so by
+   name rather than arriving from the worker halfway through a generation.
 2. Run the golden suite to get a first baseline. It will be the only baseline,
    so it is worth running on a healthy worker rather than a rushed one.
 3. Wire the vision judges and calibrate them against human ratings before

@@ -17,7 +17,7 @@ import { query, queryOne, transaction } from "@videoai/database";
 import { recheck, runQc, type QcOutcome, type QcRequest } from "@videoai/qc";
 import { measuredJudges, modelJudges, type Judge } from "@videoai/quality";
 import { compose, probe, toSrt } from "@videoai/render";
-import { assembleTimeline, type AssembledDialogue } from "@videoai/timeline";
+import { assembleTimeline, type AssembledBed, type AssembledDialogue } from "@videoai/timeline";
 
 import { materialise, readLocal, scratch } from "./media.js";
 
@@ -252,7 +252,7 @@ export async function buildTimeline(input: {
   shot_assets: Record<string, string>;
 }): Promise<{ timeline_id: string }> {
   const ctx = await jobContext(input.job_id);
-  const dialogue = await loadDialogue(ctx, input.plan);
+  const [dialogue, beds] = await Promise.all([loadDialogue(ctx, input.plan), loadBeds(ctx, input.plan)]);
 
   const { timeline, extended_shots } = assembleTimeline({
     project_id: ctx.project_id,
@@ -260,6 +260,7 @@ export async function buildTimeline(input: {
     plan: input.plan,
     shot_assets: input.shot_assets,
     dialogue,
+    beds,
     loudness_profile: ctx.loudness_profile,
   });
 
@@ -325,6 +326,41 @@ async function loadDialogue(ctx: JobContext, plan: ShotPlan): Promise<AssembledD
         words: row.words ?? [],
         phonemes: row.phonemes ?? [],
       },
+    }));
+}
+
+/**
+ * Ambience that has been generated, one bed per shot.
+ *
+ * Found by role and by the shot slug the generation recorded as the asset's
+ * label, and taken at its measured length -- the same rule the dialogue follows,
+ * because a bed trimmed to a planned length would drift from its own picture.
+ * No start offset is computed here: dialogue may have already made an earlier
+ * shot longer, so only assembly knows where a shot begins.
+ *
+ * Absent ambience is not an error. A film with no beds mixes fine.
+ */
+async function loadBeds(ctx: JobContext, plan: ShotPlan): Promise<AssembledBed[]> {
+  const rows = await query<{ label: string; asset_id: string; duration_samples: string | null }>(
+    `select distinct on (a.label) a.label, a.id as asset_id, v.duration_samples
+     from public.assets a
+     join public.asset_versions v on v.asset_id = a.id and v.version = a.current_version
+     where a.project_id = $1 and a.role = 'ambience' and a.deleted_at is null
+     order by a.label, a.created_at desc`,
+    [ctx.project_id],
+  );
+
+  const slugs = new Set(plan.shots.map((s) => s.id));
+  return rows
+    .filter((row) => slugs.has(row.label) && row.duration_samples !== null)
+    .map((row) => ({
+      kind: "AMBIENCE" as const,
+      asset_id: row.asset_id,
+      shot_id: row.label,
+      length_samples: Number(row.duration_samples),
+      // Beds sit under the picture, not level with it. Ducking under speech is
+      // applied on top of this by assembly.
+      gain_db: -18,
     }));
 }
 

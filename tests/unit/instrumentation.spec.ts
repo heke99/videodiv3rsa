@@ -74,7 +74,15 @@ describe("activities are traced", () => {
 
   it("carries the job id so spans can be grouped by production", async () => {
     const activities = createActivities();
-    await expect(activities.generateAmbience({ job_id: "job-2", shot_ids: [] })).rejects.toThrow();
+    // A shot that has an approved take but no reachable database: the activity
+    // has real work to do, so it must fail rather than skip, and the span has
+    // to carry the job it failed under.
+    await expect(
+      activities.generateAmbience({
+        job_id: "job-2",
+        shots: [{ shot_id: "shot_01", asset_id: "asset-1" }],
+      }),
+    ).rejects.toThrow();
 
     expect(exporter.spans.at(-1)!.attributes["job_id"]).toBe("job-2");
   });

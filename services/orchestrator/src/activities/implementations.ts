@@ -8,6 +8,7 @@ import type {
   GenerateRequest,
   JobStatus,
   RepairPlan,
+  RoutableKind,
   SceneBible,
   Script,
   Shot,
@@ -19,7 +20,7 @@ import { compileShotPrompt, Director, LocalReasoningBackend, Planner, preflight 
 import { buildCapabilitySnapshot, loadRoutableModels, loadRoutingRules, route } from "@videoai/models";
 import { availableProfiles } from "@videoai/gpu-manager";
 import { planRepair as classifyRepair } from "@videoai/quality";
-import { loadCatalogue, recordSkillRun, type SkillPackage } from "@videoai/skills";
+import { recordSkillRun, type SkillPackage } from "@videoai/skills";
 import { adjustCredit } from "@videoai/usage";
 import { METRICS, SPANS, metric, traced } from "@videoai/telemetry";
 
@@ -30,7 +31,17 @@ import {
   recordShotTake as recordShotTakeActivity,
   runQualityControl,
 } from "./delivery.js";
+import {
+  alignDialogue as alignDialogueActivity,
+  generateAmbience as generateAmbienceActivity,
+  generateDialogue as generateDialogueActivity,
+} from "./audio.js";
 import { dispatch } from "./generate.js";
+import {
+  generateReferences as generateReferencesActivity,
+  persistEntities,
+} from "./references.js";
+import { skillCatalogue } from "./support.js";
 import type { Activities } from "./index.js";
 
 /**
@@ -50,19 +61,14 @@ import type { Activities } from "./index.js";
 /**
  * Activities that are still not written.
  *
- * A shrinking list, and the distinction it draws has changed. `generateShot`
- * and `applyRepair` used to be here; they are now implemented, and against an
- * empty fleet they fail with `NoCapacityError` -- "no worker holds this model"
- * rather than "nobody wrote this". The four below genuinely have no
- * implementation yet: each needs its own routing call and its own request
- * shape, and claiming otherwise would be the thing this list exists to stop.
+ * Empty, and that is the claim worth holding rather than deleting. Every stage
+ * the production workflow calls now dispatches; against an empty fleet each one
+ * fails with `NoCapacityError` -- "no worker holds this model" -- rather than
+ * "nobody wrote this". The list stays so that an activity added without an
+ * implementation has somewhere honest to be recorded, and so the boundary test
+ * keeps asserting the difference between the two failures.
  */
-export const UNIMPLEMENTED_ACTIVITIES = [
-  "generateDialogue",
-  "alignDialogue",
-  "generateAmbience",
-  "generateReferences",
-] as const satisfies ReadonlyArray<keyof Activities>;
+export const UNIMPLEMENTED_ACTIVITIES = [] as const satisfies ReadonlyArray<keyof Activities>;
 
 /**
  * Activities that dispatch to a GPU worker.
@@ -70,9 +76,14 @@ export const UNIMPLEMENTED_ACTIVITIES = [
  * Written, and reachable: with a worker registered they generate, and without
  * one they refuse by name. Exported so a test can hold both halves of that.
  */
-export const DISPATCHING_ACTIVITIES = ["generateShot", "applyRepair"] as const satisfies ReadonlyArray<
-  keyof Activities
->;
+export const DISPATCHING_ACTIVITIES = [
+  "generateShot",
+  "applyRepair",
+  "generateDialogue",
+  "alignDialogue",
+  "generateAmbience",
+  "generateReferences",
+] as const satisfies ReadonlyArray<keyof Activities>;
 
 /**
  * The span each activity runs inside.
@@ -144,19 +155,11 @@ function lowestDimension(evaluation: { scores: Record<string, number | undefined
 }
 
 export function createActivities(): Activities {
-  const cfg = config();
-  const planner = new Planner(new Director(LocalReasoningBackend.fromConfig(cfg)));
+  const planner = new Planner(new Director(LocalReasoningBackend.fromConfig(config())));
 
-  /**
-   * The skill catalogue, read from disk once per worker.
-   *
-   * Cached as the promise rather than the value so concurrent activities share
-   * one read, and held as a rejected promise on failure so a broken catalogue
-   * is reported every time instead of silently retrying the filesystem under
-   * every job.
-   */
-  let catalogue: Promise<Map<string, SkillPackage>> | null = null;
-  const skills = () => (catalogue ??= loadCatalogue(cfg.SKILLS_ROOT));
+  // One catalogue read per process rather than per `createActivities` call,
+  // shared with the stages that live in their own modules.
+  const skills = skillCatalogue;
 
   return instrument({
     async loadCapabilitySnapshot({ organization_id: _organizationId }) {
@@ -210,6 +213,15 @@ export function createActivities(): Activities {
     async generateSceneBible({ job_id, brief }) {
       const bible = await planner.sceneBible(brief, await planningContext(job_id));
       await saveVersion(job_id, "scene_bible", bible);
+
+      // The document alone is not enough. Characters, products, locations and
+      // voices are queried relationally by the library, by dependency
+      // invalidation and by the reference tables, and nothing had ever written
+      // those rows -- so the library was empty and the Director was offered no
+      // voices to cast. They belong here, where the entities become real,
+      // rather than later beside the images made of them.
+      const job = await requireJob(job_id);
+      await persistEntities(job.organization_id, job.project_id, bible);
       return bible;
     },
 
@@ -249,7 +261,17 @@ export function createActivities(): Activities {
       // enabled rule whose generation kinds appear in the plan. Preflight
       // reports on these rather than routing for real, because routing throws
       // on an unlicensed model and preflight's job is to say so, not to fail.
-      const kinds = new Set(plan.shots.map((s) => s.preferred_generation_kind));
+      const kinds = new Set<RoutableKind>(plan.shots.map((s) => s.preferred_generation_kind));
+      // The stages that are not shots but that this plan will still reach.
+      // Ambience runs for every approved take, so its model is required; speech
+      // and alignment only when the plan actually has lines to speak. Narration
+      // that belongs to no shot is not visible here, which is the one gap: it
+      // surfaces at the stage instead of at preflight.
+      kinds.add("video_to_audio");
+      if (plan.shots.some((s) => s.dialogue_line_ids.length > 0)) {
+        kinds.add("text_to_speech");
+        kinds.add("alignment");
+      }
       const rules = await loadRoutingRules();
       const required = [
         ...new Set(
@@ -408,17 +430,17 @@ export function createActivities(): Activities {
       return output;
     },
 
-    async generateDialogue() {
-      throw notYetOnHardware("dialogue generation");
+    async generateDialogue(input) {
+      return generateDialogueActivity(input);
     },
-    async alignDialogue() {
-      throw notYetOnHardware("dialogue alignment");
+    async alignDialogue(input) {
+      return alignDialogueActivity(input);
     },
-    async generateAmbience() {
-      throw notYetOnHardware("ambience generation");
+    async generateAmbience(input) {
+      return generateAmbienceActivity(input);
     },
-    async generateReferences() {
-      throw notYetOnHardware("reference generation");
+    async generateReferences(input) {
+      return generateReferencesActivity(input);
     },
 
     // -- CPU bound. Measurement, arithmetic and ffmpeg; no GPU involved.
@@ -865,12 +887,6 @@ export function createActivities(): Activities {
 }
 
 /**
- * The honest failure for work that needs a GPU we do not have yet. Non
- * retryable, because retrying will not conjure hardware, and explicit, because
- * the alternative -- a stub that returns something plausible -- would make the
- * pipeline look like it works.
- */
-/**
  * Reference images a shot should be generated against.
  *
  * Keyframes first: a shot that starts from a given frame is the strongest
@@ -886,19 +902,4 @@ function referencesFor(shot: Shot): GenerateRequest["references"] {
     references.push({ role: "end_frame", asset: shot.end_frame_asset, strength: 1 });
   }
   return references;
-}
-
-/**
- * The honest failure for work nobody has written yet.
- *
- * Distinct from `NoCapacityError`, which means the code exists and the fleet
- * cannot serve it. Conflating the two is what let "blocked on hardware" hide
- * an activity that never dispatched at all.
- */
-function notYetOnHardware(what: string): ApplicationFailure {
-  return ApplicationFailure.nonRetryable(
-    `${what} is not implemented yet. The worker contract and the dispatch path exist; ` +
-      `this activity has not been wired to them.`,
-    "NotImplemented",
-  );
 }

@@ -116,7 +116,7 @@ export async function buildCapabilitySnapshot(availableProfiles: GpuProfile[]): 
       model_id: m.model_id,
       version: m.version,
       generation_kinds: m.generation_kinds as CapabilitySnapshot["models"][number]["generation_kinds"],
-      max_duration_frames: m.max_duration_frames || 1,
+      max_duration_frames: m.max_duration_frames,
     })),
     skills: skills.map((s) => ({ skill_id: s.skill_id, version: s.version })),
     available_profiles: availableProfiles,

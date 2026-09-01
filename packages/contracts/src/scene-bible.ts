@@ -69,6 +69,7 @@ export const ProductViewKind = z.enum([
   "material_reference",
   "scale_reference",
 ]);
+export type ProductViewKind = z.infer<typeof ProductViewKind>;
 
 /** Product Package (spec section 13) — what the product / logo / text judges compare against. */
 export const Product = z.object({

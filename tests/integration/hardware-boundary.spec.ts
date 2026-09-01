@@ -64,10 +64,27 @@ const CALLS: Record<keyof Activities, () => Promise<unknown>> = (() => {
     runPreflight: () => activities.runPreflight(any({ job_id: "j", plan: { shots: [] } })),
     routeShots: () =>
       activities.routeShots(any({ job_id: "j", plan: { shots: [] }, quality_mode: "STANDARD" })),
-    generateDialogue: () => activities.generateDialogue(any({ job_id: "j" })),
-    alignDialogue: () => activities.alignDialogue(any({ job_id: "j", dialogue_asset_ids: [] })),
-    generateAmbience: () => activities.generateAmbience(any({ job_id: "j", shot_ids: [] })),
-    generateReferences: () => activities.generateReferences(any({ job_id: "j" })),
+    // Each of these is given real work to do, not an empty list. They now skip
+    // when there is nothing to generate, so an empty input would prove only
+    // that the skip works -- and would say nothing about the boundary.
+    generateDialogue: () =>
+      activities.generateDialogue(
+        any({
+          job_id: "j",
+          script: { narration: [], dialogue: [{ id: "l1", voice_id: "v1", text: "hello" }] },
+          bible: { voices: [] },
+        }),
+      ),
+    alignDialogue: () =>
+      activities.alignDialogue(
+        any({ job_id: "j", dialogue: [{ dialogue_line_id: "l1", asset_id: "a", text: "hello" }] }),
+      ),
+    generateAmbience: () =>
+      activities.generateAmbience(any({ job_id: "j", shots: [{ shot_id: "s1", asset_id: "a" }] })),
+    generateReferences: () =>
+      activities.generateReferences(
+        any({ job_id: "j", bible: { characters: [], products: [], locations: [], voices: [] } }),
+      ),
     generateShot: () => activities.generateShot(any({ job_id: "j", shot })),
     runQc: () => activities.runQc(any({ job_id: "j", asset_id: "a", shot, qc_profile: "STANDARD" })),
     planRepair: () =>
@@ -134,6 +151,13 @@ describe("the hardware boundary", () => {
 
   it("covers every activity", () => {
     expect(Object.keys(CALLS).length).toBe(rest.length + UNIMPLEMENTED_ACTIVITIES.length);
+  });
+
+  it("has nothing left unwritten", () => {
+    // An empty list is a claim worth holding rather than a file worth deleting.
+    // Every stage the production workflow calls now dispatches; if one is ever
+    // added without an implementation, this is where it has to be declared.
+    expect(UNIMPLEMENTED_ACTIVITIES).toEqual([]);
   });
 
   it("names the activities that dispatch, and they are not in the unwritten list", () => {

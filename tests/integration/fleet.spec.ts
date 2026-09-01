@@ -135,14 +135,36 @@ describe.skipIf(!DATABASE_URL)("a GPU host reaching the control plane", () => {
     // these returned empty for every possible fleet.
     expect(await availableProfiles()).toContain("GPU_PROFILE_ULTRA");
 
-    const candidates = await selectWorkers(
-      {
-        required_profile: "GPU_PROFILE_ULTRA",
-        required_precision: "fp8",
-        required_vram_bytes: 1_000_000,
-      } as never,
-      "wan2.2-t2v-a14b",
-    );
+    const requirement = {
+      required_profile: "GPU_PROFILE_ULTRA",
+      required_precision: "fp8",
+      required_vram_bytes: 1_000_000,
+    } as never;
+
+    // Registered, healthy, big enough -- and not a candidate, because it has
+    // not reported holding the model. Dispatching to it would send a 14B
+    // generation to a host with no weights and find out from the worker.
+    expect(await selectWorkers(requirement, "wan2.2-t2v-a14b")).toEqual([]);
+
+    // The model scan the supervisor posts after checking its volume.
+    expect(
+      (
+        await post("/internal/workers/models", {
+          worker_id: workerId,
+          models: [
+            {
+              model_id: "wan2.2-t2v-a14b",
+              model_version: "2.2.0",
+              present: true,
+              verified: true,
+              loaded: true,
+            },
+          ],
+        })
+      ).statusCode,
+    ).toBe(200);
+
+    const candidates = await selectWorkers(requirement, "wan2.2-t2v-a14b");
     expect(candidates.map((c) => c.worker_id)).toContain(workerId);
   });
 

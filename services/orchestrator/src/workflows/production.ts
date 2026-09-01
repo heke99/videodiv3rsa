@@ -155,20 +155,29 @@ export async function production(input: ProductionInput): Promise<ProductionResu
     // Speech is generated and aligned before any talking shot, so the video
     // model receives the audio that will actually ship rather than having a
     // voice forced onto it afterwards (spec section 19).
-    await advance("generating_audio");
-    const dialogue = await activities.generateDialogue({ job_id: input.job_id, script, bible });
+    //
+    // Skipped entirely when the film has no spoken lines. The rule every stage
+    // below follows is: skip when there is no work, fail when there is work and
+    // it cannot be done. A silent film should not need a TTS model to exist,
+    // and a talking one must never quietly ship without its voice.
+    if (script.narration.length + script.dialogue.length > 0) {
+      await advance("generating_audio");
+      const dialogue = await activities.generateDialogue({ job_id: input.job_id, script, bible });
 
-    await advance("syncing");
-    await activities.alignDialogue({
-      job_id: input.job_id,
-      dialogue_asset_ids: dialogue.map((d) => d.asset_id),
-    });
-    if (stopIfCancelled()) return await finish("cancelled");
+      await advance("syncing");
+      await activities.alignDialogue({ job_id: input.job_id, dialogue });
+      if (stopIfCancelled()) return await finish("cancelled");
+    }
 
     // -- references --------------------------------------------------------
-    await advance("generating_references");
-    await activities.generateReferences({ job_id: input.job_id, bible });
-    await advance("reference_qc");
+    // A Scene Bible with no characters and no products has no canonical views
+    // to generate, and asking for them would fail a project that never needed
+    // an image model.
+    if (bible.characters.length + bible.products.length > 0) {
+      await advance("generating_references");
+      await activities.generateReferences({ job_id: input.job_id, bible });
+      await advance("reference_qc");
+    }
 
     // -- shots -------------------------------------------------------------
     await advance("generating_shots");
@@ -203,8 +212,13 @@ export async function production(input: ProductionInput): Promise<ProductionResu
     }
 
     // -- delivery ----------------------------------------------------------
-    await advance("audio_generation");
-    await activities.generateAmbience({ job_id: input.job_id, shot_ids: plan.shots.map((s) => s.id) });
+    // Ambience is derived from each shot's approved take, so there is nothing
+    // to derive from until there are approved takes.
+    const approved = Object.entries(shotAssets).map(([shot_id, asset_id]) => ({ shot_id, asset_id }));
+    if (approved.length > 0) {
+      await advance("audio_generation");
+      await activities.generateAmbience({ job_id: input.job_id, shots: approved });
+    }
 
     const { timeline_id } = await activities.buildTimeline({
       job_id: input.job_id,

@@ -40,7 +40,14 @@ export interface AssembledDialogue {
 export interface AssembledBed {
   kind: Extract<TrackKind, "MUSIC" | "SFX" | "AMBIENCE" | "ROOM_TONE">;
   asset_id: string;
-  start_sample: number;
+  /**
+   * Where the bed starts, in samples from the head of the timeline.
+   *
+   * Omitted for a bed that belongs to a shot: only assembly knows where a shot
+   * begins, because dialogue may have just made an earlier one longer. A caller
+   * that computed this itself would be reading a clock that has already moved.
+   */
+  start_sample?: number;
   length_samples: number;
   gain_db?: number;
   shot_id?: string | null;
@@ -101,7 +108,7 @@ export function assembleTimeline(input: AssembleInput): AssembleResult {
     { ...input.captions, offsetSamplesById: offsets },
   );
 
-  const bedEvents = placeBeds(input.beds ?? []);
+  const bedEvents = placeBeds(input.beds ?? [], shotStarts, fps, sampleRate);
   const ducked = applyDucking(bedEvents, dialogueEvents, sampleRate);
 
   const durationFrames = shots.reduce((sum, s) => sum + s.duration_frames, 0);
@@ -217,7 +224,20 @@ function placeDialogue(
   return { events, offsets };
 }
 
-function placeBeds(beds: AssembledBed[]): AudioEvent[] {
+function placeBeds(
+  beds: AssembledBed[],
+  shotStarts: Map<string, number>,
+  fps: Rational,
+  sampleRate: number,
+): AudioEvent[] {
+  const startOf = (bed: AssembledBed): number => {
+    if (bed.start_sample !== undefined) return bed.start_sample;
+    if (bed.shot_id && shotStarts.has(bed.shot_id)) {
+      return framesToSamples(shotStarts.get(bed.shot_id)!, fps, sampleRate);
+    }
+    return 0;
+  };
+
   return beds.map((bed, index) => ({
     id: `ev_bed_${bed.kind.toLowerCase()}_${index}`,
     track_id: bed.kind.toLowerCase(),
@@ -225,8 +245,8 @@ function placeBeds(beds: AssembledBed[]): AudioEvent[] {
     asset: { asset_id: bed.asset_id },
     shot_id: bed.shot_id ?? null,
     scene_id: null,
-    start_sample: bed.start_sample,
-    end_sample: bed.start_sample + bed.length_samples,
+    start_sample: startOf(bed),
+    end_sample: startOf(bed) + bed.length_samples,
     source_start_sample: 0,
     gain_db: bed.gain_db ?? 0,
     fade_in_samples: 0,

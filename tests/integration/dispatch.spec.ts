@@ -113,6 +113,14 @@ async function registerWorker(port: number, vramBytes = 103_079_215_104) {
            vram_free_bytes = excluded.vram_free_bytes, last_seen_at = now()`,
     [workerId, `http://127.0.0.1:${port}`, vramBytes],
   );
+  // A worker is only a candidate for a model it actually holds, present and
+  // verified, which is what the supervisor's model scan reports.
+  await client.query(
+    `insert into public.gpu_worker_models (worker_id, model_id, model_version, present, verified, loaded)
+     values ($1, $2, $3, true, true, true)
+     on conflict (worker_id, model_id, model_version) do nothing`,
+    [workerId, decision.model_id, decision.model_version],
+  );
 }
 
 describe.skipIf(!DATABASE_URL)("dispatching a generation", () => {

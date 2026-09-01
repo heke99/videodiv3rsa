@@ -1,5 +1,5 @@
 import { ApplicationFailure } from "@temporalio/activity";
-import { createAsset, relate } from "@videoai/assets";
+import { createAsset, relate, type MediaMetadata } from "@videoai/assets";
 import type {
   GenerateRequest,
   GenerationProvenance,
@@ -7,7 +7,7 @@ import type {
   WorkerRequirement,
 } from "@videoai/contracts";
 import { GPU_PROFILE_VRAM_GIB } from "@videoai/contracts";
-import { query, queryOne, transaction } from "@videoai/database";
+import { queryOne, transaction } from "@videoai/database";
 import { NoCapacityError, release, reserve } from "@videoai/gpu-manager";
 import { sha256, storage } from "@videoai/storage";
 
@@ -47,6 +47,15 @@ export interface DispatchInput {
   provenance: Pick<GenerationProvenance, "skill_versions">;
   /** The asset this one was derived from, if any. Recorded as a graph edge. */
   derived_from?: { asset_id: string; relationship: Parameters<typeof relate>[3] } | null;
+  /**
+   * Read the produced bytes and say what they actually are.
+   *
+   * Used for audio, where the length is the whole point: `assembleTimeline` is
+   * built on measured audio winning over the plan, and it can only do that if
+   * something measured. Taking the length from the request would put the
+   * planner's guess in the column the timeline trusts.
+   */
+  measure?: (body: Uint8Array) => Promise<MediaMetadata>;
 }
 
 export interface DispatchOutput {
@@ -264,6 +273,7 @@ async function storeResult(
   };
 
   const created = await createAsset({
+    metadata: input.measure ? await input.measure(body) : undefined,
     organization_id: input.organization_id,
     project_id: input.project_id,
     kind: input.asset.kind,
@@ -322,14 +332,4 @@ async function finishAttempt(
       ],
     );
   });
-}
-
-/** Attempts still marked running for a job, so a cancel can reach the worker. */
-export async function runningAttempts(
-  jobId: string,
-): Promise<Array<{ id: string; worker_id: string | null }>> {
-  return query<{ id: string; worker_id: string | null }>(
-    "select id, worker_id from public.generation_attempts where job_id = $1 and status = 'running'",
-    [jobId],
-  );
 }

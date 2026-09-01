@@ -77,6 +77,11 @@ const BINDINGS: Record<string, Binding[]> = {
     { table: "products", 'table.replace(/s$/, "")': "product" },
     { table: "locations", 'table.replace(/s$/, "")': "location" },
   ],
+  // recordView, over the two entity kinds that carry reference views.
+  "services/orchestrator/src/activities/references.ts": [
+    { table: "character_references", column: "character_id" },
+    { table: "product_references", column: "product_id" },
+  ],
   // saveVersion, over its two document kinds.
   "services/orchestrator/src/activities/implementations.ts": [
     { table: "scene_bibles", versions: "scene_bible_versions", fk: "scene_bible_id" },
